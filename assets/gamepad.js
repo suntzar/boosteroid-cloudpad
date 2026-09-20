@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Virtual Gamepad API (Zona Delimitada)
+// @name         Virtual Gamepad API (Zona Delimitada Otimizada)
 // @namespace    http://tampermonkey.net/
-// @version      2.3
-// @description  Emula controle XInput com analógico restrito ao canto inferior esquerdo
+// @version      3.0
+// @description  Emula controle XInput estático e bloqueia o controle nativo do Boosteroid
 // @match        *://*/*
 // @run-at       document-start
 // @grant        none
@@ -14,11 +14,29 @@
   if (window.self !== window.top && !document.querySelector('canvas, video')) return;
 
   /* ==========================================================================
-     1. ESTADO DO GAMEPAD
+     0. CAMUFLAGEM ANTI-CONTROLE NATIVO DO BOOSTEROID
+     Engana o site para achar que o dispositivo não possui tela touch,
+     impedindo que a interface mobile nativa do cloud gaming seja ativada.
+     ========================================================================== */
+  try {
+    Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 });
+    Object.defineProperty(navigator, 'msMaxTouchPoints', { get: () => 0 });
+  } catch (e) {
+    // Ignora silenciosamente se o navegador bloquear a redefinição
+  }
+
+  /* ==========================================================================
+     1. ESTADO DO GAMEPAD (REFERÊNCIA ÚNICA E ESTÁTICA)
+     Resolve o bug das entradas duplicadas mantendo um único ID na memória.
      ========================================================================== */
   let isGamepadEnabled = true;
 
-  const state = {
+  const virtualGamepad = {
+    id: "Xbox 360 Controller (XInput STANDARD GAMEPAD)",
+    index: 0,
+    connected: true,
+    timestamp: performance.now(),
+    mapping: "standard",
     axes: [0.0, 0.0, 0.0, 0.0],
     buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0.0 }))
   };
@@ -32,34 +50,28 @@
     HOME: 16
   };
 
-  function createGamepadSnapshot() {
-    return {
-      id: "Xbox 360 Controller (XInput STANDARD GAMEPAD)",
-      index: 0,
-      connected: true,
-      timestamp: performance.now(),
-      mapping: "standard",
-      axes: [...state.axes],
-      buttons: state.buttons.map(b => ({ ...b }))
-    };
-  }
-
+  // Sobrescreve a API nativa retornando SEMPRE a referência exata
   navigator.getGamepads = function () {
-    return [createGamepadSnapshot(), null, null, null];
+    virtualGamepad.timestamp = performance.now();
+    return [virtualGamepad, null, null, null];
   };
 
   function notifyConnected() {
-    const event = new Event('gamepadconnected');
-    Object.defineProperty(event, 'gamepad', {
-      value: createGamepadSnapshot(),
-      enumerable: true
-    });
+    let event;
+    try {
+      // Navegadores modernos suportam GamepadEvent
+      event = new GamepadEvent('gamepadconnected', { gamepad: virtualGamepad });
+    } catch (e) {
+      // Fallback para WebView
+      event = new Event('gamepadconnected');
+      event.gamepad = virtualGamepad;
+    }
     window.dispatchEvent(event);
   }
 
   function resetInputs() {
-    state.axes = [0.0, 0.0, 0.0, 0.0];
-    state.buttons.forEach(b => {
+    virtualGamepad.axes = [0.0, 0.0, 0.0, 0.0];
+    virtualGamepad.buttons.forEach(b => {
       b.pressed = false;
       b.value = 0.0;
     });
@@ -72,7 +84,7 @@
   }
 
   /* ==========================================================================
-     2. INTERFACE E ESTILOS AJUSTADOS
+     2. INTERFACE E ESTILOS
      ========================================================================== */
   function initUI() {
     if (document.getElementById('vpad-root')) return;
@@ -128,7 +140,7 @@
         display: none !important;
       }
 
-      /* ZONA DO ANALÓGICO: Delimitada apenas ao quadrante inferior esquerdo */
+      /* ZONA DO ANALÓGICO: Delimitada ao quadrante inferior esquerdo */
       #vpad-touch-left {
         position: absolute;
         bottom: 0;
@@ -141,7 +153,6 @@
         touch-action: none;
       }
 
-      /* Base do Analógico (Com posição de descanso visível) */
       #vpad-stick-base {
         position: absolute;
         width: 110px;
@@ -210,13 +221,13 @@
     root.innerHTML = `
       <div id="vpad-toggle-btn" class="vpad-top-bar-btn">🎮 CONTROLE: ON</div>
       <div id="vpad-fullscreen-btn" class="vpad-top-bar-btn">⛶ Tela Cheia</div>
-      
+
       <div id="vpad-touch-left">
         <div id="vpad-stick-base">
           <div id="vpad-stick-knob"></div>
         </div>
       </div>
-      
+
       <div id="vpad-buttons-right">
         <div class="vpad-btn" id="vpad-btn-a">A</div>
         <div class="vpad-btn" id="vpad-btn-b">B</div>
@@ -267,7 +278,6 @@
     let originX = 0;
     let originY = 0;
 
-    // Posição de repouso padrão da base
     function parkStickBase() {
       stickBase.style.left = `calc(75px + env(safe-area-inset-left))`;
       stickBase.style.top = ``;
@@ -283,7 +293,6 @@
       const touch = e.changedTouches[0];
       touchId = touch.identifier;
 
-      // Obtém coordenadas relativas à caixa delimitada
       const rect = leftTouch.getBoundingClientRect();
       originX = touch.clientX;
       originY = touch.clientY;
@@ -311,8 +320,9 @@
 
           stickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
 
-          state.axes[0] = parseFloat((dx / MAX_RADIUS).toFixed(3));
-          state.axes[1] = parseFloat((dy / MAX_RADIUS).toFixed(3));
+          // Atualiza o objeto único na memória
+          virtualGamepad.axes[0] = parseFloat((dx / MAX_RADIUS).toFixed(3));
+          virtualGamepad.axes[1] = parseFloat((dy / MAX_RADIUS).toFixed(3));
           break;
         }
       }
@@ -325,8 +335,8 @@
         if (e.changedTouches[i].identifier === touchId) {
           touchId = null;
           parkStickBase();
-          state.axes[0] = 0.0;
-          state.axes[1] = 0.0;
+          virtualGamepad.axes[0] = 0.0;
+          virtualGamepad.axes[1] = 0.0;
           break;
         }
       }
@@ -339,8 +349,8 @@
       const el = document.getElementById(id);
       const setBtn = (pressed) => {
         if (!isGamepadEnabled) return;
-        state.buttons[buttonIndex].pressed = pressed;
-        state.buttons[buttonIndex].value = pressed ? 1.0 : 0.0;
+        virtualGamepad.buttons[buttonIndex].pressed = pressed;
+        virtualGamepad.buttons[buttonIndex].value = pressed ? 1.0 : 0.0;
       };
 
       el.addEventListener('touchstart', (e) => {
@@ -364,6 +374,7 @@
     bindBtn('vpad-btn-x', GP.X);
     bindBtn('vpad-btn-y', GP.Y);
 
+    // Dispara o evento apenas uma vez no carregamento
     setTimeout(notifyConnected, 400);
   }
 
