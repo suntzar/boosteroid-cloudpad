@@ -132,7 +132,10 @@
     menu: `<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
     view: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>`,
     home: `<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
+    back: `<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`,
+    clipboard: `<svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`,
     mic: `<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`,
+    micOff: `<svg viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`,
     keyboardTop: `<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="10" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="14" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>`,
     power: `<svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>`
   };
@@ -144,13 +147,12 @@
     style.textContent = `
       #vpad-root { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; user-select: none; -webkit-user-select: none; touch-action: none; overflow: hidden; font-family: system-ui, sans-serif; }
       
-      .vpad-glass-btn { display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.35); color: #fff; font-weight: 700; backdrop-filter: blur(var(--blur-val, 4px)); transition: background 0.1s; pointer-events: auto; touch-action: none; }
+      .vpad-glass-btn { display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.35); color: #fff; font-weight: 700; backdrop-filter: blur(var(--blur-val, 4px)); transition: background 0.1s, border-color 0.2s, color 0.2s; pointer-events: auto; touch-action: none; }
       .vpad-glass-btn:active, .vpad-glass-btn.active-press { background: rgba(255, 255, 255, 0.45); }
-      .vpad-glass-btn svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .vpad-glass-btn svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: inherit; }
       
-      /* Ajustado para acomodar os novos botões com wrap se a tela for estreita */
       #vpad-top-bar { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; flex-wrap: wrap; justify-content: center; width: max-content; max-width: 95vw; }
-      .vpad-top-btn { padding: 6px 12px; font-size: 10px; border-radius: 24px; transition: border-color 0.2s, color 0.2s, background 0.2s; white-space: nowrap; }
+      .vpad-top-btn { padding: 6px 12px; font-size: 10px; border-radius: 24px; white-space: nowrap; }
       .vpad-top-btn svg { width: 14px; height: 14px; }
       .vpad-top-btn.is-off { border-color: rgba(255,100,100,0.6); color: #ffbaba; background: rgba(80,0,0,0.4); }
       .vpad-top-btn.is-edit { border-color: #ffeb3b; color: #ffeb3b; }
@@ -194,7 +196,8 @@
     root.innerHTML = `
       <div id="vpad-top-bar">
         <div id="vpad-exit-btn" class="vpad-glass-btn vpad-top-btn is-danger">${ICON.power} SAIR</div>
-        <div id="vpad-mic-btn" class="vpad-glass-btn vpad-top-btn">${ICON.mic} MIC</div>
+        <div id="vpad-clipboard-btn" class="vpad-glass-btn vpad-top-btn">${ICON.clipboard} COLAR</div>
+        <div id="vpad-mic-btn" class="vpad-glass-btn vpad-top-btn">${ICON.micOff} MIC OFF</div>
         <div id="vpad-kb-btn" class="vpad-glass-btn vpad-top-btn">${ICON.keyboardTop} TECLADO</div>
         <div id="vpad-toggle-btn" class="vpad-glass-btn vpad-top-btn">${ICON.pad} ON</div>
         <div id="vpad-fullscreen-btn" class="vpad-glass-btn vpad-top-btn">${ICON.screen} ECRÃ</div>
@@ -487,7 +490,6 @@
   }
   // --- INIT: Inicialização e Eventos Globais ---
   
-  // Função para forçar um clique num elemento nativo do Boosteroid
   function clickNativeBoosteroidElement(id) {
     const el = document.getElementById(id);
     if (el) {
@@ -496,6 +498,37 @@
       el.click();
       el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
       el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+    }
+  }
+
+  // Sincroniza visualmente o botão do microfone nativo com o nosso botão
+  function setupMicSync() {
+    const nativeMic = document.getElementById('mic-control');
+    const vpadMic = document.getElementById('vpad-mic-btn');
+    if (!vpadMic) return;
+
+    if (nativeMic) {
+      const updateMicUI = () => {
+        const isEnabled = nativeMic.getAttribute('aria-pressed') === 'true';
+        if (isEnabled) {
+          vpadMic.innerHTML = `${ICON.mic} MIC ON`;
+          vpadMic.style.borderColor = '#4caf50'; // Fica verde ao ativar
+          vpadMic.style.color = '#4caf50';
+        } else {
+          vpadMic.innerHTML = `${ICON.micOff} MIC OFF`;
+          vpadMic.style.borderColor = ''; // Volta ao translúcido padrão
+          vpadMic.style.color = '';
+        }
+      };
+
+      updateMicUI(); // Chamada inicial de verificação
+
+      // Cria um observador que notifica quando a classe ou o atributo do Boosteroid mudam
+      const observer = new MutationObserver(updateMicUI);
+      observer.observe(nativeMic, { attributes: true, attributeFilter: ['aria-pressed', 'class'] });
+    } else {
+      // Se o Boosteroid demorar para renderizar o menu, tenta novamente em 1 segundo
+      setTimeout(setupMicSync, 1000);
     }
   }
 
@@ -509,18 +542,19 @@
 
     // Botões de Interação Nativa do Boosteroid
     document.getElementById('vpad-exit-btn').addEventListener('click', (e) => {
-      silenceEvent(e);
-      clickNativeBoosteroidElement('close-session-control');
+      silenceEvent(e); clickNativeBoosteroidElement('close-session-control');
+    }, { capture: true });
+
+    document.getElementById('vpad-clipboard-btn').addEventListener('click', (e) => {
+      silenceEvent(e); clickNativeBoosteroidElement('paste-control');
     }, { capture: true });
 
     document.getElementById('vpad-mic-btn').addEventListener('click', (e) => {
-      silenceEvent(e);
-      clickNativeBoosteroidElement('mic-control');
+      silenceEvent(e); clickNativeBoosteroidElement('mic-control');
     }, { capture: true });
 
     document.getElementById('vpad-kb-btn').addEventListener('click', (e) => {
-      silenceEvent(e);
-      clickNativeBoosteroidElement('keyboard-control');
+      silenceEvent(e); clickNativeBoosteroidElement('keyboard-control');
     }, { capture: true });
 
     toggleBtn.addEventListener('click', (e) => {
@@ -540,6 +574,9 @@
     }, { capture: true });
 
     setTimeout(notifyConnected, 400);
+    
+    // Inicia a vigilância nativa de UI
+    setupMicSync();
   }
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initGamepad); } 
