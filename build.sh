@@ -28,6 +28,7 @@ echo "=== Step 2: Link resources ==="
 aapt2 link \
     -I "$ANDROID_JAR" \
     --manifest "$PROJECT/AndroidManifest.xml" \
+    -A assets \
     --java "$GEN" \
     -o "$APK_DIR/app-unaligned.apk" \
     "$COMPILED_RES"/*.flat
