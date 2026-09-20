@@ -1,4 +1,4 @@
-  // --- EDIT MODE: Drag & Drop, Redimensionamento, Opacidade, Blur ---
+  // --- EDIT MODE: Drag & Drop, Redimensionamento, Opacidade, Blur e Modo Home ---
   let activeEditElement = null;
   let dragData = null;
   let panelDrag = null;
@@ -6,8 +6,11 @@
   function initEditLogic() {
     const editToggleBtn = document.getElementById('vpad-edit-toggle-btn');
     const editPanel = document.getElementById('vpad-edit-panel');
+    const homeModeBtn = document.getElementById('vpad-edit-home-mode');
+
+    // Inicializa o texto correto do botão Home
+    homeModeBtn.innerHTML = homeIsSteam ? `${ICON.keyboard} HOME: SHIFT+TAB` : `${ICON.pad} HOME: NATIVO`;
     
-    // Atualiza o estado do texto do botão Blur com base no botão selecionado
     function updatePanelState() {
       if (!activeEditElement) return;
       let currentBlur = activeEditElement.style.getPropertyValue('--blur-val');
@@ -33,6 +36,14 @@
         saveLayout();
       }
     }, { capture: true });
+
+    // Alternar modo de funcionamento do HOME
+    homeModeBtn.addEventListener('click', (e) => {
+      silenceEvent(e);
+      homeIsSteam = !homeIsSteam;
+      homeModeBtn.innerHTML = homeIsSteam ? `${ICON.keyboard} HOME: SHIFT+TAB` : `${ICON.pad} HOME: NATIVO`;
+      saveLayout();
+    });
 
     // Modificadores Visuais e Físicos
     document.getElementById('vpad-edit-plus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let s = parseFloat(activeEditElement.style.getPropertyValue('--scale')) || 1; activeEditElement.style.setProperty('--scale', Math.min(2.5, s + 0.1)); }});
@@ -88,7 +99,7 @@
       silenceEvent(e);
       activeEditElement = el; 
       activeEditElement.classList.add('selected');
-      updatePanelState(); // Sincroniza o toggle BLUR ON/OFF com o botão recém-tocado
+      updatePanelState(); 
 
       const touch = e.touches[0]; const rect = el.getBoundingClientRect();
       dragData = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: rect.left, startTop: rect.top };

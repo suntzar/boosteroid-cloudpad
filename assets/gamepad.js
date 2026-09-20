@@ -59,7 +59,9 @@
     virtualGamepad.axes = [0.0, 0.0, 0.0, 0.0];
     virtualGamepad.buttons.forEach(b => { b.pressed = false; b.value = 0.0; });
   }
-  // --- LAYOUT: Gestão de posições, tamanhos, opacidade e blur (LocalStorage) ---
+  // --- LAYOUT E CONFIGURAÇÕES: Posições e Comportamentos ---
+  let homeIsSteam = true; // Estado global para o comportamento do botão HOME
+
   const defaultLayout = {
     'vpad-el-lt': { left: '4vw', top: '8vh', scale: 1 },
     'vpad-el-lb': { left: '16vw', top: '8vh', scale: 1 },
@@ -78,26 +80,28 @@
     const layout = {};
     document.querySelectorAll('.vpad-element').forEach(el => {
       layout[el.id] = {
-        left: el.style.left,
-        top: el.style.top,
+        left: el.style.left, top: el.style.top,
         scale: el.style.getPropertyValue('--scale') || 1,
         opacity: el.style.getPropertyValue('--opacity') || 1,
         blur: el.style.getPropertyValue('--blur-val') || '4px'
       };
     });
     localStorage.setItem('vpad-layout-v1', JSON.stringify(layout));
+    localStorage.setItem('vpad-config-v1', JSON.stringify({ homeIsSteam }));
   }
 
   function loadLayout() {
-    let saved = null;
+    let saved = null; let savedConfig = null;
     try { saved = JSON.parse(localStorage.getItem('vpad-layout-v1')); } catch (e) {}
+    try { savedConfig = JSON.parse(localStorage.getItem('vpad-config-v1')); } catch (e) {}
+    
     const layout = saved || defaultLayout;
+    if (savedConfig && savedConfig.homeIsSteam !== undefined) homeIsSteam = savedConfig.homeIsSteam;
     
     for (let id in layout) {
       const el = document.getElementById(id);
       if (el) {
-        el.style.left = layout[id].left;
-        el.style.top = layout[id].top;
+        el.style.left = layout[id].left; el.style.top = layout[id].top;
         el.style.setProperty('--scale', layout[id].scale !== undefined ? layout[id].scale : 1);
         el.style.setProperty('--opacity', layout[id].opacity !== undefined ? layout[id].opacity : 1);
         el.style.setProperty('--blur-val', layout[id].blur !== undefined ? layout[id].blur : '4px');
@@ -120,6 +124,7 @@
     eye: `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
     eyeOff: `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
     drop: `<svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
+    keyboard: `<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="6" y1="9" x2="6" y2="9"/><line x1="10" y1="9" x2="10" y2="9"/><line x1="14" y1="9" x2="14" y2="9"/><line x1="18" y1="9" x2="18" y2="9"/><line x1="6" y1="13" x2="6" y2="13"/><line x1="10" y1="13" x2="10" y2="13"/><line x1="14" y1="13" x2="14" y2="13"/><line x1="18" y1="13" x2="18" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`,
     up: `<svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>`,
     down: `<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`,
     left: `<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>`,
@@ -150,14 +155,12 @@
       #vpad-edit-panel.visible { display: flex; }
       #vpad-edit-header { background: rgba(255, 255, 255, 0.1); padding: 10px; text-align: center; font-size: 10px; font-weight: bold; color: #aaa; text-transform: uppercase; border-radius: 16px 16px 0 0; cursor: move; touch-action: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
       
-      /* Grid ajustado para 6 botões */
       .vpad-edit-body { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px; }
       .vpad-edit-btn { padding: 10px 8px; border-radius: 12px; font-size: 9px; flex-direction: column; gap: 4px; text-align: center; }
       .vpad-edit-btn svg { width: 16px; height: 16px; }
+      .vpad-edit-btn.wide { grid-column: 1 / -1; flex-direction: row; font-size: 11px; padding: 10px; }
       
       .vpad-hidden { display: none !important; }
-      
-      /* A Opacidade agora é controlada na raiz de cada elemento flutuante */
       .vpad-element { position: absolute; opacity: var(--opacity, 1); transform: scale(var(--scale, 1)); transform-origin: center center; pointer-events: auto; touch-action: none; }
       .vpad-element.edit-mode-active { border: 2px dashed rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05); border-radius: 12px; }
       .vpad-element.edit-mode-active.selected { border-color: #ffeb3b; background: rgba(255, 235, 59, 0.2); z-index: 1000; }
@@ -199,6 +202,8 @@
           <div id="vpad-edit-op-minus" class="vpad-glass-btn vpad-edit-btn">${ICON.eyeOff} OPAC -</div>
           <div id="vpad-edit-op-plus" class="vpad-glass-btn vpad-edit-btn">${ICON.eye} OPAC +</div>
           <div id="vpad-edit-blur" class="vpad-glass-btn vpad-edit-btn">${ICON.drop} BLUR ON</div>
+          <!-- Novo Toggle Shift+Tab ocupando a largura total (span 3) -->
+          <div id="vpad-edit-home-mode" class="vpad-glass-btn vpad-edit-btn wide"></div>
         </div>
       </div>
       
@@ -233,7 +238,7 @@
     document.body.appendChild(root);
     loadLayout();
   }
-  // --- EDIT MODE: Drag & Drop, Redimensionamento, Opacidade, Blur ---
+  // --- EDIT MODE: Drag & Drop, Redimensionamento, Opacidade, Blur e Modo Home ---
   let activeEditElement = null;
   let dragData = null;
   let panelDrag = null;
@@ -241,8 +246,11 @@
   function initEditLogic() {
     const editToggleBtn = document.getElementById('vpad-edit-toggle-btn');
     const editPanel = document.getElementById('vpad-edit-panel');
+    const homeModeBtn = document.getElementById('vpad-edit-home-mode');
+
+    // Inicializa o texto correto do botão Home
+    homeModeBtn.innerHTML = homeIsSteam ? `${ICON.keyboard} HOME: SHIFT+TAB` : `${ICON.pad} HOME: NATIVO`;
     
-    // Atualiza o estado do texto do botão Blur com base no botão selecionado
     function updatePanelState() {
       if (!activeEditElement) return;
       let currentBlur = activeEditElement.style.getPropertyValue('--blur-val');
@@ -268,6 +276,14 @@
         saveLayout();
       }
     }, { capture: true });
+
+    // Alternar modo de funcionamento do HOME
+    homeModeBtn.addEventListener('click', (e) => {
+      silenceEvent(e);
+      homeIsSteam = !homeIsSteam;
+      homeModeBtn.innerHTML = homeIsSteam ? `${ICON.keyboard} HOME: SHIFT+TAB` : `${ICON.pad} HOME: NATIVO`;
+      saveLayout();
+    });
 
     // Modificadores Visuais e Físicos
     document.getElementById('vpad-edit-plus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let s = parseFloat(activeEditElement.style.getPropertyValue('--scale')) || 1; activeEditElement.style.setProperty('--scale', Math.min(2.5, s + 0.1)); }});
@@ -323,7 +339,7 @@
       silenceEvent(e);
       activeEditElement = el; 
       activeEditElement.classList.add('selected');
-      updatePanelState(); // Sincroniza o toggle BLUR ON/OFF com o botão recém-tocado
+      updatePanelState(); 
 
       const touch = e.touches[0]; const rect = el.getBoundingClientRect();
       dragData = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: rect.left, startTop: rect.top };
@@ -345,7 +361,17 @@
       for (let touch of e.changedTouches) { if (touch.identifier === dragData.id) dragData = null; }
     }, { capture: true });
   }
-  // --- INPUT: Analógicos e Botões Digitais ---
+  // --- INPUT: Analógicos, Botões Digitais e Emulação de Teclado ---
+  
+  function simulateKey(eventName, key, code, keyCode, shift) {
+    const event = new KeyboardEvent(eventName, {
+      key: key, code: code, keyCode: keyCode, which: keyCode,
+      shiftKey: shift, bubbles: true, cancelable: true
+    });
+    document.dispatchEvent(event);
+    window.dispatchEvent(event);
+  }
+
   function setupStick(zoneId, baseId, knobId, axisX, axisY) {
     const zone = document.getElementById(zoneId); const base = document.getElementById(baseId); const knob = document.getElementById(knobId);
     const MAX_RADIUS = 45; let touchId = null; let originX = 0, originY = 0;
@@ -389,9 +415,26 @@
     const el = document.getElementById(id); if (!el) return;
     const setBtn = (pressed) => {
       if (!isGamepadEnabled || isEditMode) return;
-      virtualGamepad.buttons[gpIndex].pressed = pressed; virtualGamepad.buttons[gpIndex].value = pressed ? 1.0 : 0.0;
+
+      // Intercepta o botão HOME para enviar atalho de teclado se a opção "Shift+Tab" estiver ativa
+      if (gpIndex === GP.HOME && homeIsSteam) {
+        if (pressed) {
+          simulateKey('keydown', 'Shift', 'ShiftLeft', 16, true);
+          simulateKey('keydown', 'Tab', 'Tab', 9, true);
+        } else {
+          simulateKey('keyup', 'Tab', 'Tab', 9, true);
+          simulateKey('keyup', 'Shift', 'ShiftLeft', 16, false);
+        }
+      } else {
+        // Lógica tradicional de Gamepad
+        virtualGamepad.buttons[gpIndex].pressed = pressed; 
+        virtualGamepad.buttons[gpIndex].value = pressed ? 1.0 : 0.0;
+      }
+
+      // Feedback visual ao tocar
       if (pressed) el.classList.add('active-press'); else el.classList.remove('active-press');
     };
+
     el.addEventListener('touchstart', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(true); } }, { passive: false, capture: true });
     el.addEventListener('touchend', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(false); } }, { passive: false, capture: true });
     el.addEventListener('touchcancel', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(false); } }, { passive: false, capture: true });

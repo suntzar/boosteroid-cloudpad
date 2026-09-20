@@ -1,4 +1,14 @@
-  // --- INPUT: Analógicos e Botões Digitais ---
+  // --- INPUT: Analógicos, Botões Digitais e Emulação de Teclado ---
+  
+  function simulateKey(eventName, key, code, keyCode, shift) {
+    const event = new KeyboardEvent(eventName, {
+      key: key, code: code, keyCode: keyCode, which: keyCode,
+      shiftKey: shift, bubbles: true, cancelable: true
+    });
+    document.dispatchEvent(event);
+    window.dispatchEvent(event);
+  }
+
   function setupStick(zoneId, baseId, knobId, axisX, axisY) {
     const zone = document.getElementById(zoneId); const base = document.getElementById(baseId); const knob = document.getElementById(knobId);
     const MAX_RADIUS = 45; let touchId = null; let originX = 0, originY = 0;
@@ -42,9 +52,26 @@
     const el = document.getElementById(id); if (!el) return;
     const setBtn = (pressed) => {
       if (!isGamepadEnabled || isEditMode) return;
-      virtualGamepad.buttons[gpIndex].pressed = pressed; virtualGamepad.buttons[gpIndex].value = pressed ? 1.0 : 0.0;
+
+      // Intercepta o botão HOME para enviar atalho de teclado se a opção "Shift+Tab" estiver ativa
+      if (gpIndex === GP.HOME && homeIsSteam) {
+        if (pressed) {
+          simulateKey('keydown', 'Shift', 'ShiftLeft', 16, true);
+          simulateKey('keydown', 'Tab', 'Tab', 9, true);
+        } else {
+          simulateKey('keyup', 'Tab', 'Tab', 9, true);
+          simulateKey('keyup', 'Shift', 'ShiftLeft', 16, false);
+        }
+      } else {
+        // Lógica tradicional de Gamepad
+        virtualGamepad.buttons[gpIndex].pressed = pressed; 
+        virtualGamepad.buttons[gpIndex].value = pressed ? 1.0 : 0.0;
+      }
+
+      // Feedback visual ao tocar
       if (pressed) el.classList.add('active-press'); else el.classList.remove('active-press');
     };
+
     el.addEventListener('touchstart', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(true); } }, { passive: false, capture: true });
     el.addEventListener('touchend', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(false); } }, { passive: false, capture: true });
     el.addEventListener('touchcancel', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(false); } }, { passive: false, capture: true });
