@@ -1,4 +1,4 @@
-  // --- EDIT MODE: Drag & Drop, Redimensionamento ---
+  // --- EDIT MODE: Drag & Drop, Redimensionamento, Opacidade, Blur ---
   let activeEditElement = null;
   let dragData = null;
   let panelDrag = null;
@@ -7,6 +7,15 @@
     const editToggleBtn = document.getElementById('vpad-edit-toggle-btn');
     const editPanel = document.getElementById('vpad-edit-panel');
     
+    // Atualiza o estado do texto do botão Blur com base no botão selecionado
+    function updatePanelState() {
+      if (!activeEditElement) return;
+      let currentBlur = activeEditElement.style.getPropertyValue('--blur-val');
+      let isBlurOn = currentBlur === '' || currentBlur === '4px';
+      if (currentBlur === '0px') isBlurOn = false;
+      document.getElementById('vpad-edit-blur').innerHTML = isBlurOn ? `${ICON.drop} BLUR ON` : `${ICON.drop} BLUR OFF`;
+    }
+
     editToggleBtn.addEventListener('click', (e) => {
       silenceEvent(e);
       isEditMode = !isEditMode;
@@ -25,9 +34,29 @@
       }
     }, { capture: true });
 
-    // Modificadores
+    // Modificadores Visuais e Físicos
     document.getElementById('vpad-edit-plus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let s = parseFloat(activeEditElement.style.getPropertyValue('--scale')) || 1; activeEditElement.style.setProperty('--scale', Math.min(2.5, s + 0.1)); }});
     document.getElementById('vpad-edit-minus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let s = parseFloat(activeEditElement.style.getPropertyValue('--scale')) || 1; activeEditElement.style.setProperty('--scale', Math.max(0.4, s - 0.1)); }});
+    
+    document.getElementById('vpad-edit-op-plus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let o = parseFloat(activeEditElement.style.getPropertyValue('--opacity')); if (isNaN(o)) o = 1; activeEditElement.style.setProperty('--opacity', Math.min(1.0, o + 0.1).toFixed(1)); }});
+    document.getElementById('vpad-edit-op-minus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let o = parseFloat(activeEditElement.style.getPropertyValue('--opacity')); if (isNaN(o)) o = 1; activeEditElement.style.setProperty('--opacity', Math.max(0.1, o - 0.1).toFixed(1)); }});
+
+    document.getElementById('vpad-edit-blur').addEventListener('click', (e) => {
+      silenceEvent(e);
+      if (!activeEditElement) return;
+      let currentBlur = activeEditElement.style.getPropertyValue('--blur-val');
+      let isBlurOn = currentBlur === '' || currentBlur === '4px';
+      if (currentBlur === '0px') isBlurOn = false;
+
+      if (isBlurOn) {
+        activeEditElement.style.setProperty('--blur-val', '0px');
+        document.getElementById('vpad-edit-blur').innerHTML = `${ICON.drop} BLUR OFF`;
+      } else {
+        activeEditElement.style.setProperty('--blur-val', '4px');
+        document.getElementById('vpad-edit-blur').innerHTML = `${ICON.drop} BLUR ON`;
+      }
+    });
+
     document.getElementById('vpad-edit-reset').addEventListener('click', (e) => { silenceEvent(e); resetLayout(); });
 
     // Painel Flutuante Drag
@@ -49,14 +78,18 @@
     }, { passive: false });
     editHeader.addEventListener('touchend', () => { panelDrag = null; }, { capture: true });
 
-    // Botões Drag
+    // Seleção e Arrastar de Botões
     document.addEventListener('touchstart', (e) => {
       if (!isEditMode || e.target.closest('#vpad-edit-panel')) return;
       const el = e.target.closest('.vpad-element');
       if (activeEditElement && activeEditElement !== el) activeEditElement.classList.remove('selected');
       if (!el) { activeEditElement = null; return; }
+      
       silenceEvent(e);
-      activeEditElement = el; activeEditElement.classList.add('selected');
+      activeEditElement = el; 
+      activeEditElement.classList.add('selected');
+      updatePanelState(); // Sincroniza o toggle BLUR ON/OFF com o botão recém-tocado
+
       const touch = e.touches[0]; const rect = el.getBoundingClientRect();
       dragData = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: rect.left, startTop: rect.top };
     }, { capture: true, passive: false });
@@ -77,4 +110,3 @@
       for (let touch of e.changedTouches) { if (touch.identifier === dragData.id) dragData = null; }
     }, { capture: true });
   }
-
