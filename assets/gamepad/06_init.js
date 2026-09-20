@@ -1,4 +1,17 @@
   // --- INIT: Inicialização e Eventos Globais ---
+  
+  // Função para forçar um clique num elemento nativo do Boosteroid
+  function clickNativeBoosteroidElement(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      el.click();
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+    }
+  }
+
   function initGamepad() {
     renderUI();
     initEditLogic();
@@ -7,10 +20,20 @@
     const toggleBtn = document.getElementById('vpad-toggle-btn');
     const controlsContainer = document.getElementById('vpad-controls-container');
 
-    // Navegar de volta (Sair do jogo / Voltar para a Dashboard)
-    document.getElementById('vpad-back-btn').addEventListener('click', (e) => {
+    // Botões de Interação Nativa do Boosteroid
+    document.getElementById('vpad-exit-btn').addEventListener('click', (e) => {
       silenceEvent(e);
-      window.history.back();
+      clickNativeBoosteroidElement('close-session-control');
+    }, { capture: true });
+
+    document.getElementById('vpad-mic-btn').addEventListener('click', (e) => {
+      silenceEvent(e);
+      clickNativeBoosteroidElement('mic-control');
+    }, { capture: true });
+
+    document.getElementById('vpad-kb-btn').addEventListener('click', (e) => {
+      silenceEvent(e);
+      clickNativeBoosteroidElement('keyboard-control');
     }, { capture: true });
 
     toggleBtn.addEventListener('click', (e) => {

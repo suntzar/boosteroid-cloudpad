@@ -17,7 +17,9 @@
     menu: `<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
     view: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>`,
     home: `<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
-    back: `<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`
+    mic: `<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`,
+    keyboardTop: `<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="10" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="14" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>`,
+    power: `<svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>`
   };
 
   function renderUI() {
@@ -31,11 +33,13 @@
       .vpad-glass-btn:active, .vpad-glass-btn.active-press { background: rgba(255, 255, 255, 0.45); }
       .vpad-glass-btn svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
       
-      #vpad-top-bar { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; }
-      .vpad-top-btn { padding: 8px 16px; font-size: 11px; border-radius: 24px; transition: border-color 0.2s, color 0.2s, background 0.2s; }
+      /* Ajustado para acomodar os novos botões com wrap se a tela for estreita */
+      #vpad-top-bar { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; flex-wrap: wrap; justify-content: center; width: max-content; max-width: 95vw; }
+      .vpad-top-btn { padding: 6px 12px; font-size: 10px; border-radius: 24px; transition: border-color 0.2s, color 0.2s, background 0.2s; white-space: nowrap; }
       .vpad-top-btn svg { width: 14px; height: 14px; }
       .vpad-top-btn.is-off { border-color: rgba(255,100,100,0.6); color: #ffbaba; background: rgba(80,0,0,0.4); }
       .vpad-top-btn.is-edit { border-color: #ffeb3b; color: #ffeb3b; }
+      .vpad-top-btn.is-danger { border-color: #ff6b6b; color: #ff6b6b; }
       
       #vpad-edit-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.85); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 0; display: none; flex-direction: column; pointer-events: auto; backdrop-filter: blur(8px); z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
       #vpad-edit-panel.visible { display: flex; }
@@ -74,7 +78,9 @@
     root.id = 'vpad-root';
     root.innerHTML = `
       <div id="vpad-top-bar">
-        <div id="vpad-back-btn" class="vpad-glass-btn vpad-top-btn">${ICON.back} SAIR</div>
+        <div id="vpad-exit-btn" class="vpad-glass-btn vpad-top-btn is-danger">${ICON.power} SAIR</div>
+        <div id="vpad-mic-btn" class="vpad-glass-btn vpad-top-btn">${ICON.mic} MIC</div>
+        <div id="vpad-kb-btn" class="vpad-glass-btn vpad-top-btn">${ICON.keyboardTop} TECLADO</div>
         <div id="vpad-toggle-btn" class="vpad-glass-btn vpad-top-btn">${ICON.pad} ON</div>
         <div id="vpad-fullscreen-btn" class="vpad-glass-btn vpad-top-btn">${ICON.screen} ECRÃ</div>
         <div id="vpad-edit-toggle-btn" class="vpad-glass-btn vpad-top-btn">${ICON.edit} EDITAR</div>
