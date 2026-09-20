@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Virtual Gamepad API (Layout Editável & HUD Ergonómico)
+// @name         Virtual Gamepad API (UI Premium & Painel Flutuante)
 // @namespace    http://tampermonkey.net/
-// @version      5.0
-// @description  Emula controlo XInput com Modo Edição (Drag & Drop, Redimensionamento e Gravação)
+// @version      6.0
+// @description  Emula controlo XInput com SVGs, Estilo Unificado e Painel de Edição Móvel
 // @match        *://*/*
 // @run-at       document-start
 // @grant        none
@@ -13,7 +13,6 @@
 
   if (window.self !== window.top && !document.querySelector('canvas, video')) return;
 
-  // Camuflagem anti-controlo nativo do Boosteroid
   try {
     Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 });
     Object.defineProperty(navigator, 'msMaxTouchPoints', { get: () => 0 });
@@ -23,6 +22,25 @@
   let isEditMode = false;
   let activeEditElement = null;
   let dragData = null;
+
+  /* ==========================================================================
+     BIBLIOTECA DE ÍCONES (SVG PATHS INLINE)
+     ========================================================================== */
+  const ICON = {
+    pad: `<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="6"/><circle cx="6" cy="12" r="1"/><circle cx="18" cy="12" r="1"/><path d="M10 12h.01M14 12h.01"/></svg>`,
+    screen: `<svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`,
+    edit: `<svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`,
+    plus: `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+    minus: `<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+    reset: `<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>`,
+    up: `<svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>`,
+    down: `<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`,
+    left: `<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>`,
+    right: `<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>`,
+    menu: `<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
+    view: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>`,
+    home: `<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`
+  };
 
   const virtualGamepad = {
     id: "Xbox 360 Controller (XInput STANDARD GAMEPAD)",
@@ -75,7 +93,7 @@
   }
 
   /* ==========================================================================
-     GESTOR DE LAYOUT (GRAVAÇÃO E CARREGAMENTO)
+     GESTOR DE LAYOUT
      ========================================================================== */
   const defaultLayout = {
     'vpad-el-lt': { left: '4vw', top: '8vh', scale: 1 },
@@ -107,7 +125,6 @@
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem('vpad-layout-v1')); } catch (e) {}
     const layout = saved || defaultLayout;
-    
     for (let id in layout) {
       const el = document.getElementById(id);
       if (el) {
@@ -134,68 +151,80 @@
       #vpad-root {
         position: fixed; inset: 0; z-index: 2147483647;
         pointer-events: none; user-select: none; -webkit-user-select: none;
-        touch-action: none; overflow: hidden; font-family: sans-serif;
+        touch-action: none; overflow: hidden; font-family: system-ui, sans-serif;
       }
       
-      /* Barras de Ferramentas */
-      #vpad-top-bar, #vpad-edit-bar {
-        position: absolute; left: 50%; transform: translateX(-50%);
-        display: flex; gap: 8px; pointer-events: auto; z-index: 9999;
+      /* Botões base estilo Glassmorphism Unificado */
+      .vpad-glass-btn {
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.35);
+        color: #fff; font-weight: 700; backdrop-filter: blur(4px); transition: background 0.1s;
+        pointer-events: auto; touch-action: none;
       }
-      #vpad-top-bar { top: calc(10px + env(safe-area-inset-top)); }
-      #vpad-edit-bar { top: calc(55px + env(safe-area-inset-top)); display: none; }
-      #vpad-edit-bar.visible { display: flex; }
+      .vpad-glass-btn:active, .vpad-glass-btn.active-press { background: rgba(255, 255, 255, 0.45); }
+      .vpad-glass-btn svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-      .vpad-top-btn {
-        padding: 8px 14px; background: rgba(0, 0, 0, 0.75);
-        border: 1px solid rgba(255,255,255,0.4); color: #fff;
-        font-size: 11px; font-weight: bold; border-radius: 20px; 
-        backdrop-filter: blur(4px); white-space: nowrap; transition: background 0.2s;
+      /* Toolbar Superior */
+      #vpad-top-bar {
+        position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 50%;
+        transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto;
       }
-      .vpad-top-btn:active { background: rgba(255,255,255,0.4); }
-      .vpad-top-btn.is-off { border-color: rgba(255,100,100,0.8); background: rgba(80,0,0,0.8); }
+      .vpad-top-btn {
+        padding: 8px 16px; font-size: 11px; border-radius: 24px;
+        transition: border-color 0.2s, color 0.2s, background 0.2s;
+      }
+      .vpad-top-btn svg { width: 14px; height: 14px; }
+      .vpad-top-btn.is-off { border-color: rgba(255,100,100,0.6); color: #ffbaba; background: rgba(80,0,0,0.4); }
       .vpad-top-btn.is-edit { border-color: #ffeb3b; color: #ffeb3b; }
+
+      /* Painel de Edição Flutuante */
+      #vpad-edit-panel {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        background: rgba(20, 20, 25, 0.85); border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 16px; padding: 0; display: none; flex-direction: column;
+        pointer-events: auto; backdrop-filter: blur(8px); z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      }
+      #vpad-edit-panel.visible { display: flex; }
+      
+      #vpad-edit-header {
+        background: rgba(255, 255, 255, 0.1); padding: 10px; text-align: center;
+        font-size: 10px; font-weight: bold; color: #aaa; text-transform: uppercase;
+        border-radius: 16px 16px 0 0; cursor: move; touch-action: none; border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+      
+      .vpad-edit-body { display: flex; gap: 8px; padding: 16px; }
+      .vpad-edit-btn { padding: 10px 14px; border-radius: 12px; font-size: 10px; flex-direction: column; gap: 4px;}
+      .vpad-edit-btn svg { width: 18px; height: 18px; }
 
       .vpad-hidden { display: none !important; }
 
       /* Elementos Arrastáveis (Wrappers) */
       .vpad-element {
-        position: absolute; 
-        transform: scale(var(--scale, 1));
-        transform-origin: center center;
-        pointer-events: auto;
-        touch-action: none;
+        position: absolute; transform: scale(var(--scale, 1));
+        transform-origin: center center; pointer-events: auto; touch-action: none;
       }
       .vpad-element.edit-mode-active {
-        border: 2px dashed rgba(255, 255, 255, 0.3);
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
+        border: 2px dashed rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05); border-radius: 12px;
       }
       .vpad-element.edit-mode-active.selected {
-        border-color: #ffeb3b;
-        background: rgba(255, 235, 59, 0.2);
-        z-index: 1000;
+        border-color: #ffeb3b; background: rgba(255, 235, 59, 0.2); z-index: 1000;
       }
 
-      /* Estética dos Botões */
-      .vpad-btn-base {
-        position: relative; display: flex; align-items: center; justify-content: center;
-        background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.35);
-        color: #fff; font-weight: bold; backdrop-filter: blur(4px); transition: background 0.1s;
-      }
-      .vpad-btn-base.active-press { background: rgba(255, 255, 255, 0.5); }
+      /* Estética dos Botões do Gamepad */
+      .vpad-btn-round { width: 50px; height: 50px; border-radius: 50%; font-size: 16px; letter-spacing: 1px; }
+      .vpad-btn-round svg { width: 22px; height: 22px; }
       
-      .vpad-btn-round { width: 48px; height: 48px; border-radius: 50%; font-size: 14px; }
-      .vpad-btn-rect { width: 70px; height: 45px; border-radius: 8px; font-size: 13px; }
-      .vpad-btn-small { width: 45px; height: 35px; border-radius: 20px; font-size: 10px; }
+      .vpad-btn-rect { width: 75px; height: 45px; border-radius: 10px; font-size: 14px; }
+      .vpad-btn-small { width: 45px; height: 35px; border-radius: 20px; font-size: 11px; }
+      .vpad-btn-small svg { width: 14px; height: 14px; }
 
-      /* Agrupamentos Específicos */
-      #vpad-el-menus { display: flex; gap: 10px; }
-      .vpad-cluster-grid { position: relative; width: 130px; height: 130px; }
-      .vpad-cluster-grid .btn-top { position: absolute; top: 0; left: 41px; }
-      .vpad-cluster-grid .btn-bottom { position: absolute; bottom: 0; left: 41px; }
-      .vpad-cluster-grid .btn-left { position: absolute; top: 41px; left: 0; }
-      .vpad-cluster-grid .btn-right { position: absolute; top: 41px; right: 0; }
+      /* Agrupamentos */
+      #vpad-el-menus { display: flex; gap: 12px; }
+      .vpad-cluster-grid { position: relative; width: 140px; height: 140px; }
+      .vpad-cluster-grid .btn-top { position: absolute; top: 0; left: 45px; }
+      .vpad-cluster-grid .btn-bottom { position: absolute; bottom: 0; left: 45px; }
+      .vpad-cluster-grid .btn-left { position: absolute; top: 45px; left: 0; }
+      .vpad-cluster-grid .btn-right { position: absolute; top: 45px; right: 0; }
 
       /* Zonas Analógicas */
       .vpad-touch-zone { width: 35vw; height: 50vh; }
@@ -217,16 +246,19 @@
     root.innerHTML = `
       <!-- Toolbar Superior -->
       <div id="vpad-top-bar">
-        <div id="vpad-toggle-btn" class="vpad-top-btn">🎮 JOGAR: ON</div>
-        <div id="vpad-fullscreen-btn" class="vpad-top-btn">⛶ ECRÃ</div>
-        <div id="vpad-edit-toggle-btn" class="vpad-top-btn">✏️ EDITAR</div>
+        <div id="vpad-toggle-btn" class="vpad-glass-btn vpad-top-btn">${ICON.pad} ON</div>
+        <div id="vpad-fullscreen-btn" class="vpad-glass-btn vpad-top-btn">${ICON.screen} ECRÃ</div>
+        <div id="vpad-edit-toggle-btn" class="vpad-glass-btn vpad-top-btn">${ICON.edit} EDITAR</div>
       </div>
       
-      <!-- Toolbar de Edição -->
-      <div id="vpad-edit-bar">
-        <div id="vpad-edit-minus" class="vpad-top-btn">➖ TAMANHO</div>
-        <div id="vpad-edit-plus" class="vpad-top-btn">➕ TAMANHO</div>
-        <div id="vpad-edit-reset" class="vpad-top-btn">↺ REPOR</div>
+      <!-- Painel de Edição Flutuante -->
+      <div id="vpad-edit-panel">
+        <div id="vpad-edit-header">≡ ARRASTAR PAINEL</div>
+        <div class="vpad-edit-body">
+          <div id="vpad-edit-minus" class="vpad-glass-btn vpad-edit-btn">${ICON.minus} DIMINUIR</div>
+          <div id="vpad-edit-plus" class="vpad-glass-btn vpad-edit-btn">${ICON.plus} AUMENTAR</div>
+          <div id="vpad-edit-reset" class="vpad-glass-btn vpad-edit-btn">${ICON.reset} REPOR</div>
+        </div>
       </div>
 
       <div id="vpad-controls-container">
@@ -239,35 +271,35 @@
         </div>
 
         <!-- Triggers / Bumpers -->
-        <div class="vpad-element" id="vpad-el-lt"><div class="vpad-btn-base vpad-btn-rect" id="vpad-btn-lt">LT</div></div>
-        <div class="vpad-element" id="vpad-el-lb"><div class="vpad-btn-base vpad-btn-rect" id="vpad-btn-lb">LB</div></div>
-        <div class="vpad-element" id="vpad-el-rt"><div class="vpad-btn-base vpad-btn-rect" id="vpad-btn-rt">RT</div></div>
-        <div class="vpad-element" id="vpad-el-rb"><div class="vpad-btn-base vpad-btn-rect" id="vpad-btn-rb">RB</div></div>
+        <div class="vpad-element" id="vpad-el-lt"><div class="vpad-glass-btn vpad-btn-rect" id="vpad-btn-lt">LT</div></div>
+        <div class="vpad-element" id="vpad-el-lb"><div class="vpad-glass-btn vpad-btn-rect" id="vpad-btn-lb">LB</div></div>
+        <div class="vpad-element" id="vpad-el-rt"><div class="vpad-glass-btn vpad-btn-rect" id="vpad-btn-rt">RT</div></div>
+        <div class="vpad-element" id="vpad-el-rb"><div class="vpad-glass-btn vpad-btn-rect" id="vpad-btn-rb">RB</div></div>
 
         <!-- Menus Centrais -->
         <div class="vpad-element" id="vpad-el-menus">
-          <div class="vpad-btn-base vpad-btn-small" id="vpad-btn-select">VIEW</div>
-          <div class="vpad-btn-base vpad-btn-small" id="vpad-btn-home">HOME</div>
-          <div class="vpad-btn-base vpad-btn-small" id="vpad-btn-start">MENU</div>
+          <div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-select">${ICON.view}</div>
+          <div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-home">${ICON.home}</div>
+          <div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-start">${ICON.menu}</div>
         </div>
 
-        <!-- D-Pad Cluster -->
+        <!-- D-Pad Cluster (SVGs) -->
         <div class="vpad-element vpad-cluster-grid" id="vpad-el-dpad">
-          <div class="vpad-btn-base vpad-btn-round btn-top" id="vpad-btn-up">▲</div>
-          <div class="vpad-btn-base vpad-btn-round btn-bottom" id="vpad-btn-down">▼</div>
-          <div class="vpad-btn-base vpad-btn-round btn-left" id="vpad-btn-left">◀</div>
-          <div class="vpad-btn-base vpad-btn-round btn-right" id="vpad-btn-right">▶</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-top" id="vpad-btn-up">${ICON.up}</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-bottom" id="vpad-btn-down">${ICON.down}</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-left" id="vpad-btn-left">${ICON.left}</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-right" id="vpad-btn-right">${ICON.right}</div>
         </div>
-        <div class="vpad-element" id="vpad-el-l3"><div class="vpad-btn-base vpad-btn-small" id="vpad-btn-l3">L3</div></div>
+        <div class="vpad-element" id="vpad-el-l3"><div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-l3">L3</div></div>
 
-        <!-- ABXY Cluster -->
+        <!-- ABXY Cluster (Letras Limpas) -->
         <div class="vpad-element vpad-cluster-grid" id="vpad-el-abxy">
-          <div class="vpad-btn-base vpad-btn-round btn-top" id="vpad-btn-y">Y</div>
-          <div class="vpad-btn-base vpad-btn-round btn-bottom" id="vpad-btn-a">A</div>
-          <div class="vpad-btn-base vpad-btn-round btn-left" id="vpad-btn-x">X</div>
-          <div class="vpad-btn-base vpad-btn-round btn-right" id="vpad-btn-b">B</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-top" id="vpad-btn-y">Y</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-bottom" id="vpad-btn-a">A</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-left" id="vpad-btn-x">X</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-right" id="vpad-btn-b">B</div>
         </div>
-        <div class="vpad-element" id="vpad-el-r3"><div class="vpad-btn-base vpad-btn-small" id="vpad-btn-r3">R3</div></div>
+        <div class="vpad-element" id="vpad-el-r3"><div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-r3">R3</div></div>
       </div>
     `;
     document.body.appendChild(root);
@@ -279,20 +311,20 @@
        ========================================================================== */
     const toggleBtn = document.getElementById('vpad-toggle-btn');
     const editToggleBtn = document.getElementById('vpad-edit-toggle-btn');
-    const editBar = document.getElementById('vpad-edit-bar');
+    const editPanel = document.getElementById('vpad-edit-panel');
     const controlsContainer = document.getElementById('vpad-controls-container');
 
     toggleBtn.addEventListener('click', (e) => {
       silenceEvent(e);
-      if (isEditMode) return; // Bloqueado se estiver a editar
+      if (isEditMode) return;
       isGamepadEnabled = !isGamepadEnabled;
       if (isGamepadEnabled) {
-        toggleBtn.textContent = "🎮 JOGAR: ON";
+        toggleBtn.innerHTML = `${ICON.pad} ON`;
         toggleBtn.classList.remove('is-off');
         controlsContainer.classList.remove('vpad-hidden');
         notifyConnected();
       } else {
-        toggleBtn.textContent = "🎮 JOGAR: OFF";
+        toggleBtn.innerHTML = `${ICON.pad} OFF`;
         toggleBtn.classList.add('is-off');
         controlsContainer.classList.add('vpad-hidden');
         resetInputs();
@@ -314,12 +346,12 @@
       
       if (isEditMode) {
         editToggleBtn.classList.add('is-edit');
-        editBar.classList.add('visible');
+        editPanel.classList.add('visible');
         resetInputs();
         elements.forEach(el => el.classList.add('edit-mode-active'));
       } else {
         editToggleBtn.classList.remove('is-edit');
-        editBar.classList.remove('visible');
+        editPanel.classList.remove('visible');
         if (activeEditElement) activeEditElement.classList.remove('selected');
         activeEditElement = null;
         elements.forEach(el => el.classList.remove('edit-mode-active'));
@@ -327,7 +359,7 @@
       }
     }, { capture: true });
 
-    /* Controlos de Tamanho e Reset */
+    /* Controlos de Tamanho e Reset no Painel Flutuante */
     document.getElementById('vpad-edit-plus').addEventListener('click', (e) => {
       silenceEvent(e);
       if (!activeEditElement) return;
@@ -348,13 +380,53 @@
     });
 
     /* ==========================================================================
-       LÓGICA DE DRAG & DROP (MODO EDIÇÃO)
+       ARRASTAR O PAINEL DE EDIÇÃO
+       ========================================================================== */
+    const editHeader = document.getElementById('vpad-edit-header');
+    let panelDrag = null;
+
+    editHeader.addEventListener('touchstart', (e) => {
+      silenceEvent(e);
+      const touch = e.touches[0];
+      const rect = editPanel.getBoundingClientRect();
+      
+      // Fixa a posição atual em px e remove o transform do centro para evitar pulos
+      editPanel.style.left = `${rect.left}px`;
+      editPanel.style.top = `${rect.top}px`;
+      editPanel.style.transform = 'none';
+
+      panelDrag = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: rect.left, startTop: rect.top };
+    }, { passive: false });
+
+    editHeader.addEventListener('touchmove', (e) => {
+      if (!panelDrag) return;
+      silenceEvent(e);
+      for (let touch of e.changedTouches) {
+        if (touch.identifier === panelDrag.id) {
+          const dx = touch.clientX - panelDrag.startX;
+          const dy = touch.clientY - panelDrag.startY;
+          editPanel.style.left = `${panelDrag.startLeft + dx}px`;
+          editPanel.style.top = `${panelDrag.startTop + dy}px`;
+        }
+      }
+    }, { passive: false });
+
+    editHeader.addEventListener('touchend', (e) => { panelDrag = null; }, { capture: true });
+
+    /* ==========================================================================
+       LÓGICA DE DRAG & DROP DOS BOTÕES (MODO EDIÇÃO)
        ========================================================================== */
     document.addEventListener('touchstart', (e) => {
       if (!isEditMode) return;
+      
+      // Correção: Se tocar dentro do painel de edição, ignora a lógica de deselecionar!
+      if (e.target.closest('#vpad-edit-panel')) return;
+
       const el = e.target.closest('.vpad-element');
       
-      if (activeEditElement) activeEditElement.classList.remove('selected');
+      if (activeEditElement && activeEditElement !== el) {
+        activeEditElement.classList.remove('selected');
+      }
       
       if (!el) {
         activeEditElement = null;
@@ -367,13 +439,7 @@
 
       const touch = e.touches[0];
       const rect = el.getBoundingClientRect();
-      dragData = {
-        id: touch.identifier,
-        startX: touch.clientX,
-        startY: touch.clientY,
-        startLeft: rect.left,
-        startTop: rect.top
-      };
+      dragData = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: rect.left, startTop: rect.top };
     }, { capture: true, passive: false });
 
     document.addEventListener('touchmove', (e) => {
@@ -383,10 +449,8 @@
         if (touch.identifier === dragData.id) {
           const dx = touch.clientX - dragData.startX;
           const dy = touch.clientY - dragData.startY;
-          // Converte pixéis absolutos para vw/vh para suportar rotação perfeita
           const newLeft = ((dragData.startLeft + dx) / window.innerWidth) * 100;
           const newTop = ((dragData.startTop + dy) / window.innerHeight) * 100;
-          
           activeEditElement.style.left = `${newLeft}vw`;
           activeEditElement.style.top = `${newTop}vh`;
         }
@@ -401,7 +465,7 @@
     }, { capture: true });
 
     /* ==========================================================================
-       LÓGICA DOS ANALÓGICOS (ISOLADA POR ZONA)
+       LÓGICA DOS ANALÓGICOS E BOTÕES DIGITAIS
        ========================================================================== */
     function setupStick(zoneId, baseId, knobId, axisX, axisY) {
       const zone = document.getElementById(zoneId);
@@ -412,10 +476,8 @@
       let originX = 0, originY = 0;
 
       function park() {
-        base.style.left = '50%';
-        base.style.top = '50%';
-        base.style.transform = 'translate(-50%, -50%)';
-        knob.style.transform = 'translate(-50%, -50%)';
+        base.style.left = '50%'; base.style.top = '50%';
+        base.style.transform = 'translate(-50%, -50%)'; knob.style.transform = 'translate(-50%, -50%)';
       }
       park();
 
@@ -423,15 +485,11 @@
         if (!isGamepadEnabled || isEditMode) return;
         silenceEvent(e);
         if (touchId !== null) return;
-        
         const touch = e.changedTouches[0];
         touchId = touch.identifier;
-        originX = touch.clientX; 
-        originY = touch.clientY;
-        
+        originX = touch.clientX; originY = touch.clientY;
         const rect = zone.getBoundingClientRect();
-        base.style.left = `${originX - rect.left}px`;
-        base.style.top = `${originY - rect.top}px`;
+        base.style.left = `${originX - rect.left}px`; base.style.top = `${originY - rect.top}px`;
         knob.style.transform = `translate(-50%, -50%)`;
       }, { passive: false, capture: true });
 
@@ -441,14 +499,9 @@
         for (let i = 0; i < e.changedTouches.length; i++) {
           if (e.changedTouches[i].identifier === touchId) {
             const touch = e.changedTouches[i];
-            let dx = touch.clientX - originX; 
-            let dy = touch.clientY - originY;
+            let dx = touch.clientX - originX; let dy = touch.clientY - originY;
             const dist = Math.hypot(dx, dy);
-            
-            if (dist > MAX_RADIUS) { 
-              dx = (dx/dist)*MAX_RADIUS; 
-              dy = (dy/dist)*MAX_RADIUS; 
-            }
+            if (dist > MAX_RADIUS) { dx = (dx/dist)*MAX_RADIUS; dy = (dy/dist)*MAX_RADIUS; }
             knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
             virtualGamepad.axes[axisX] = parseFloat((dx / MAX_RADIUS).toFixed(3));
             virtualGamepad.axes[axisY] = parseFloat((dy / MAX_RADIUS).toFixed(3));
@@ -475,9 +528,6 @@
     setupStick('vpad-el-touch-l', 'vpad-stick-base-l', 'vpad-stick-knob-l', 0, 1);
     setupStick('vpad-el-touch-r', 'vpad-stick-base-r', 'vpad-stick-knob-r', 2, 3);
 
-    /* ==========================================================================
-       LÓGICA DOS BOTÕES DIGITAIS
-       ========================================================================== */
     function bindBtn(id, gpIndex) {
       const el = document.getElementById(id);
       if (!el) return;
