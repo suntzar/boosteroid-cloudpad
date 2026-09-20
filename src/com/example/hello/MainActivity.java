@@ -2,6 +2,7 @@ package com.example.hello;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Build;
 import android.util.Base64;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -23,6 +24,11 @@ public class MainActivity extends Activity {
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+        // Preenche a área do "notch" (entalhe da câmera) para tela 100% cheia em aparelhos modernos
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        }
 
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -54,7 +60,6 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                // Injeta o CSS compilado em Base64 para prevenir quebras de linha que crasham o Javascript
                 if (!cssCode.isEmpty()) {
                     String encodedCss = Base64.encodeToString(cssCode.getBytes(), Base64.NO_WRAP);
                     String injectCssJs = "(function() {" +
@@ -65,7 +70,6 @@ public class MainActivity extends Activity {
                     view.evaluateJavascript(injectCssJs, null);
                 }
 
-                // Injeta o Gamepad Virtual
                 if (!jsCode.isEmpty()) {
                     view.evaluateJavascript("(function(){ " + jsCode + " })();", null);
                 }
