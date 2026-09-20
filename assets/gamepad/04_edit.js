@@ -8,7 +8,6 @@
     const editPanel = document.getElementById('vpad-edit-panel');
     const homeModeBtn = document.getElementById('vpad-edit-home-mode');
 
-    // Inicializa o texto correto do botão Home
     homeModeBtn.innerHTML = homeIsSteam ? `${ICON.keyboard} HOME: SHIFT+TAB` : `${ICON.pad} HOME: NATIVO`;
     
     function updatePanelState() {
@@ -37,7 +36,6 @@
       }
     }, { capture: true });
 
-    // Alternar modo de funcionamento do HOME
     homeModeBtn.addEventListener('click', (e) => {
       silenceEvent(e);
       homeIsSteam = !homeIsSteam;
@@ -45,10 +43,8 @@
       saveLayout();
     });
 
-    // Modificadores Visuais e Físicos
     document.getElementById('vpad-edit-plus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let s = parseFloat(activeEditElement.style.getPropertyValue('--scale')) || 1; activeEditElement.style.setProperty('--scale', Math.min(2.5, s + 0.1)); }});
     document.getElementById('vpad-edit-minus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let s = parseFloat(activeEditElement.style.getPropertyValue('--scale')) || 1; activeEditElement.style.setProperty('--scale', Math.max(0.4, s - 0.1)); }});
-    
     document.getElementById('vpad-edit-op-plus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let o = parseFloat(activeEditElement.style.getPropertyValue('--opacity')); if (isNaN(o)) o = 1; activeEditElement.style.setProperty('--opacity', Math.min(1.0, o + 0.1).toFixed(1)); }});
     document.getElementById('vpad-edit-op-minus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let o = parseFloat(activeEditElement.style.getPropertyValue('--opacity')); if (isNaN(o)) o = 1; activeEditElement.style.setProperty('--opacity', Math.max(0.1, o - 0.1).toFixed(1)); }});
 
@@ -70,14 +66,26 @@
 
     document.getElementById('vpad-edit-reset').addEventListener('click', (e) => { silenceEvent(e); resetLayout(); });
 
-    // Painel Flutuante Drag
+    /* --- CORREÇÃO DO TELETRANSPORTE (PAINEL FLUTUANTE) --- */
     const editHeader = document.getElementById('vpad-edit-header');
     editHeader.addEventListener('touchstart', (e) => {
       silenceEvent(e);
-      const touch = e.touches[0]; const rect = editPanel.getBoundingClientRect();
-      editPanel.style.left = `${rect.left}px`; editPanel.style.top = `${rect.top}px`; editPanel.style.transform = 'none';
-      panelDrag = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: rect.left, startTop: rect.top };
+      const touch = e.touches[0]; 
+      
+      let currentLeft = parseFloat(editPanel.style.left);
+      let currentTop = parseFloat(editPanel.style.top);
+      
+      // Se ainda não tiver left/top definidos (centralizado nativamente), pega o centro
+      if (isNaN(currentLeft)) currentLeft = window.innerWidth / 2;
+      if (isNaN(currentTop)) currentTop = window.innerHeight / 2;
+
+      editPanel.style.left = `${currentLeft}px`; 
+      editPanel.style.top = `${currentTop}px`; 
+      editPanel.style.transform = 'none'; // Trava o transform
+      
+      panelDrag = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: currentLeft, startTop: currentTop };
     }, { passive: false });
+
     editHeader.addEventListener('touchmove', (e) => {
       if (!panelDrag) return; silenceEvent(e);
       for (let touch of e.changedTouches) {
@@ -89,7 +97,7 @@
     }, { passive: false });
     editHeader.addEventListener('touchend', () => { panelDrag = null; }, { capture: true });
 
-    // Seleção e Arrastar de Botões
+    /* --- CORREÇÃO DO TELETRANSPORTE (BOTÕES DO GAMEPAD) --- */
     document.addEventListener('touchstart', (e) => {
       if (!isEditMode || e.target.closest('#vpad-edit-panel')) return;
       const el = e.target.closest('.vpad-element');
@@ -101,17 +109,30 @@
       activeEditElement.classList.add('selected');
       updatePanelState(); 
 
-      const touch = e.touches[0]; const rect = el.getBoundingClientRect();
-      dragData = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: rect.left, startTop: rect.top };
+      const touch = e.touches[0]; 
+      
+      // Lemos o CSS inline real do elemento e convertemos, ignorando o bounding box que tem escala
+      let startLeftVW = parseFloat(el.style.left) || 0;
+      let startTopVH = parseFloat(el.style.top) || 0;
+      
+      dragData = { 
+        id: touch.identifier, 
+        startX: touch.clientX, 
+        startY: touch.clientY, 
+        startLeftVW: startLeftVW, 
+        startTopVH: startTopVH 
+      };
     }, { capture: true, passive: false });
 
     document.addEventListener('touchmove', (e) => {
       if (!isEditMode || !dragData || !activeEditElement) return; silenceEvent(e);
       for (let touch of e.changedTouches) {
         if (touch.identifier === dragData.id) {
-          const newLeft = ((dragData.startLeft + (touch.clientX - dragData.startX)) / window.innerWidth) * 100;
-          const newTop = ((dragData.startTop + (touch.clientY - dragData.startY)) / window.innerHeight) * 100;
-          activeEditElement.style.left = `${newLeft}vw`; activeEditElement.style.top = `${newTop}vh`;
+          // Calcula o delta em px e converte direto para vw/vh
+          const dxVW = ((touch.clientX - dragData.startX) / window.innerWidth) * 100;
+          const dyVH = ((touch.clientY - dragData.startY) / window.innerHeight) * 100;
+          activeEditElement.style.left = `${dragData.startLeftVW + dxVW}vw`; 
+          activeEditElement.style.top = `${dragData.startTopVH + dyVH}vh`;
         }
       }
     }, { capture: true, passive: false });

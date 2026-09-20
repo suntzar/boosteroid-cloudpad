@@ -1,12 +1,21 @@
-  // --- INPUT: Analógicos, Botões Digitais e Emulação de Teclado ---
+  // --- INPUT: Analógicos, Botões Digitais e Emulação de Teclado Avançada ---
   
-  function simulateKey(eventName, key, code, keyCode, shift) {
+  function simulateKey(eventName, key, code, keyCode, shiftKey) {
+    // Procura elementos específicos de stream (Boosteroid usa video ou canvas em wrappers específicos)
+    const target = document.querySelector('video, canvas, #game-stream, .stream-container') || document.body;
+    
     const event = new KeyboardEvent(eventName, {
       key: key, code: code, keyCode: keyCode, which: keyCode,
-      shiftKey: shift, bubbles: true, cancelable: true
+      shiftKey: shiftKey, bubbles: true, cancelable: true, composed: true
     });
-    document.dispatchEvent(event);
-    window.dispatchEvent(event);
+    
+    // Hacks pesados para contornar a segurança de engines de cloud gaming que validam keyCode real
+    Object.defineProperties(event, {
+      keyCode: { get: () => keyCode },
+      which: { get: () => keyCode }
+    });
+    
+    target.dispatchEvent(event);
   }
 
   function setupStick(zoneId, baseId, knobId, axisX, axisY) {
@@ -53,7 +62,7 @@
     const setBtn = (pressed) => {
       if (!isGamepadEnabled || isEditMode) return;
 
-      // Intercepta o botão HOME para enviar atalho de teclado se a opção "Shift+Tab" estiver ativa
+      // Interceptação do Botão Home para Shift+Tab no Boosteroid
       if (gpIndex === GP.HOME && homeIsSteam) {
         if (pressed) {
           simulateKey('keydown', 'Shift', 'ShiftLeft', 16, true);
@@ -63,12 +72,10 @@
           simulateKey('keyup', 'Shift', 'ShiftLeft', 16, false);
         }
       } else {
-        // Lógica tradicional de Gamepad
         virtualGamepad.buttons[gpIndex].pressed = pressed; 
         virtualGamepad.buttons[gpIndex].value = pressed ? 1.0 : 0.0;
       }
 
-      // Feedback visual ao tocar
       if (pressed) el.classList.add('active-press'); else el.classList.remove('active-press');
     };
 
