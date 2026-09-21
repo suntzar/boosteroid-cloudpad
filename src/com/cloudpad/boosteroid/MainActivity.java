@@ -9,6 +9,7 @@ import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Base64;
+import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -72,7 +73,6 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         setContentView(webView);
 
-        // Injeta a Ponte Nativa no WebView com o nome "AndroidClipboard"
         webView.addJavascriptInterface(new ClipboardJSInterface(this), "AndroidClipboard");
 
         WebSettings settings = webView.getSettings();
@@ -81,8 +81,9 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-
         settings.setMediaPlaybackRequiresUserGesture(false);
+        
+        // Mantemos um User-Agent de Desktop limpo para enganar o Boosteroid sobre a resolução
         settings.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -121,18 +122,27 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                if (!cssCode.isEmpty()) {
-                    String encodedCss = Base64.encodeToString(cssCode.getBytes(), Base64.NO_WRAP);
-                    String injectCssJs = "(function() {" +
-                                         "var style = document.createElement('style');" +
-                                         "style.innerHTML = window.atob('" + encodedCss + "');" +
-                                         "document.head.appendChild(style);" +
-                                         "})();";
-                    view.evaluateJavascript(injectCssJs, null);
-                }
+                // Lógica de verificação de sessão (Cookies)
+                String cookies = CookieManager.getInstance().getCookie(url);
+                boolean isLoggedIn = cookies != null && (cookies.contains("boosteroid_auth=") || cookies.contains("access_token="));
 
-                if (!jsCode.isEmpty()) {
-                    view.evaluateJavascript("(function(){ " + jsCode + " })();", null);
+                // A Injeção só ocorre se a autenticação for confirmada
+                if (isLoggedIn) {
+                    if (!cssCode.isEmpty()) {
+                        String encodedCss = Base64.encodeToString(cssCode.getBytes(), Base64.NO_WRAP);
+                        String injectCssJs = "(function() {" +
+                                             "if(document.getElementById('injected-md3-theme')) return;" +
+                                             "var style = document.createElement('style');" +
+                                             "style.id = 'injected-md3-theme';" +
+                                             "style.innerHTML = window.atob('" + encodedCss + "');" +
+                                             "document.head.appendChild(style);" +
+                                             "})();";
+                        view.evaluateJavascript(injectCssJs, null);
+                    }
+
+                    if (!jsCode.isEmpty()) {
+                        view.evaluateJavascript("(function(){ " + jsCode + " })();", null);
+                    }
                 }
             }
         });
