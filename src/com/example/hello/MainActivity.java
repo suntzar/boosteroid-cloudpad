@@ -3,9 +3,13 @@ package com.example.hello;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Base64;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -23,6 +27,27 @@ public class MainActivity extends Activity {
     private WebView webView;
     private PermissionRequest pendingAudioRequest;
     private static final int AUDIO_PERMISSION_CODE = 101;
+
+    // PONTE NATIVA: Permite que o JavaScript leia a área de transferência do Android
+    public class ClipboardJSInterface {
+        Context mContext;
+        ClipboardJSInterface(Context c) {
+            mContext = c;
+        }
+
+        @JavascriptInterface
+        public String getClipboardText() {
+            ClipboardManager clipboard = (ClipboardManager) mContext.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence text = clip.getItemAt(0).getText();
+                    return text != null ? text.toString() : "";
+                }
+            }
+            return "";
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +72,9 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         setContentView(webView);
 
+        // Injeta a Ponte Nativa no WebView com o nome "AndroidClipboard"
+        webView.addJavascriptInterface(new ClipboardJSInterface(this), "AndroidClipboard");
+
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -57,11 +85,9 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
-        // WebChromeClient intercepta pedidos do site para hardware (Câmera, Microfone)
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                // Verifica se o site (Boosteroid) está pedindo áudio
                 boolean isAudioRequest = false;
                 for (String resource : request.getResources()) {
                     if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
@@ -71,19 +97,14 @@ public class MainActivity extends Activity {
                 }
 
                 if (isAudioRequest) {
-                    // A partir do Android 6 (M), precisamos pedir permissão dinamicamente
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                            // Salva a requisição do site na memória
                             pendingAudioRequest = request;
-                            // Sobe a caixinha nativa do Android perguntando ao usuário
                             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, AUDIO_PERMISSION_CODE);
                         } else {
-                            // O usuário já tinha aceitado antes, libera direto
                             request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
                         }
                     } else {
-                        // Versões antigas do Android aceitam tudo na instalação
                         request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
                     }
                 } else {
@@ -119,20 +140,16 @@ public class MainActivity extends Activity {
         webView.loadUrl("https://cloud.boosteroid.com");
     }
 
-    // Essa função escuta a resposta da caixinha de permissão do Android
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == AUDIO_PERMISSION_CODE) {
-            // Se o usuário tocou em "Permitir"
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 if (pendingAudioRequest != null) {
-                    // Autoriza o site a usar o microfone
                     pendingAudioRequest.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
                     pendingAudioRequest = null;
                 }
             } else {
-                // Se o usuário negou
                 if (pendingAudioRequest != null) {
                     pendingAudioRequest.deny();
                     pendingAudioRequest = null;
