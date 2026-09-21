@@ -13,7 +13,8 @@
     }
   }
 
-  let isGamepadEnabled = true;
+  // 🔴 Alterado para iniciar desabilitado por padrão
+  let isGamepadEnabled = false;
   let isEditMode = false;
 
   const virtualGamepad = {
