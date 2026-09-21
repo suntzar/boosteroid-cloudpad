@@ -1,28 +1,15 @@
-  // --- CORE: Anti-detecção e Estado do Gamepad ---
-  try {
-    Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 });
-    Object.defineProperty(navigator, 'msMaxTouchPoints', { get: () => 0 });
-  } catch (e) {}
+  // --- CORE: Estado do Gamepad e Interceptação Segura ---
 
   // 🚀 INTERCEPTAÇÃO DA ÁREA DE TRANSFERÊNCIA (CLIPBOARD) 🚀
-  // Contorna a restrição do WebView injetando o texto lido nativamente pelo Java
   if (window.AndroidClipboard) {
     try {
       const nativeClipboard = {
         readText: async () => window.AndroidClipboard.getClipboardText(),
-        writeText: async () => {} // Ignora envios indesejados
+        writeText: async () => {} 
       };
-      
-      // Tenta sobrescrever a API inteira
-      Object.defineProperty(navigator, 'clipboard', {
-        value: nativeClipboard,
-        configurable: true
-      });
+      Object.defineProperty(navigator, 'clipboard', { value: nativeClipboard, configurable: true });
     } catch(e) {
-      // Fallback caso o navegador proíba sobrescrever o objeto raiz
-      if (navigator.clipboard) {
-        navigator.clipboard.readText = async () => window.AndroidClipboard.getClipboardText();
-      }
+      if (navigator.clipboard) navigator.clipboard.readText = async () => window.AndroidClipboard.getClipboardText();
     }
   }
 

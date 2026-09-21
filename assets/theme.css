@@ -335,3 +335,18 @@ body .store-item__control-button--secondary .secondary-button::after {
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E") no-repeat center / contain !important;
     display: block !important;
 }
+
+/* =======================================================
+   9. OCULTAR CONTROLES MOBILE NATIVOS DO BOOSTEROID
+   (Substitui o hack JS do maxTouchPoints mantendo a segurança)
+   ======================================================= */
+#menu.m_menu_wrapper {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: scale(0) !important;
+    z-index: -9999 !important;
+}
+.iphone_tap_message,
+.m_lan_wrapper {
+    display: none !important;
+}

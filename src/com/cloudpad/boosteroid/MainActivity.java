@@ -28,12 +28,9 @@ public class MainActivity extends Activity {
     private PermissionRequest pendingAudioRequest;
     private static final int AUDIO_PERMISSION_CODE = 101;
 
-    // PONTE NATIVA: Permite que o JavaScript leia a área de transferência do Android de forma segura
     public class ClipboardJSInterface {
         Context mContext;
-        ClipboardJSInterface(Context c) {
-            mContext = c;
-        }
+        ClipboardJSInterface(Context c) { mContext = c; }
 
         @JavascriptInterface
         public String getClipboardText() {
@@ -82,8 +79,13 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
         
-        // Mantemos um User-Agent de Desktop para garantir a interface completa do Boosteroid
-        settings.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        // 🚀 O BYPASS DEFINITIVO DE CAPTCHA E GOOGLE LOGIN 🚀
+        // Pegamos a identidade real do seu celular para não irritar o reCAPTCHA...
+        String defaultUA = settings.getUserAgentString();
+        // Removemos "Mobile" para o Boosteroid entregar a versão PC
+        // Removemos " wv" para o Google OAuth liberar o login achando que é o Chrome Mobile
+        String safeUA = defaultUA.replace("Mobile", "").replace("; wv", "");
+        settings.setUserAgentString(safeUA);
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -121,7 +123,6 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                // Injeta apenas se estiver no domínio do Boosteroid (evita injetar na página de login do Google caso o usuário tente)
                 if (url != null && url.contains("cloud.boosteroid.com")) {
                     if (!cssCode.isEmpty()) {
                         String encodedCss = Base64.encodeToString(cssCode.getBytes(), Base64.NO_WRAP);
