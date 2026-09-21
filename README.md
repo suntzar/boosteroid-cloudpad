@@ -1,91 +1,42 @@
-# termux-android-hello
+# Boosteroid CloudPad 🎮
 
-Build and install Android APKs entirely from Termux -- no Android Studio, no computer, just your phone.
+Uma aplicação Android nativa, extremamente leve e construída do zero para entregar a melhor experiência de Cloud Gaming no Boosteroid direto do seu smartphone. Sem distrações, com máxima performance.
 
-This is a minimal Hello World app that demonstrates the complete build pipeline: resource compilation, Java compilation, DEX conversion, APK packaging, and signing.
+Construído inteiramente via Termux (sem Android Studio, sem Gradle).
 
-## Prerequisites
+## 🚀 Recursos (Features)
 
-- Android device with [Termux](https://f-droid.org/en/packages/com.termux/) installed
-- Java (JDK) installed in Termux: `pkg install openjdk-21`
+*   **Controle Virtual XInput Completo:** Dual sticks virtuais precisos, D-Pad, Gatilhos (LT/RT), Bumpers (LB/RB) e cliques dos analógicos (L3/R3).
+*   **Modo de Edição Drag & Drop:** Redimensione, reposicione, altere a opacidade e o desfoque de cada botão individualmente. O seu layout é salvo automaticamente no armazenamento local.
+*   **Emulação de Teclado (Shift+Tab):** Converta o botão "HOME" do controle para acionar a interface da Steam nativamente na nuvem.
+*   **Integração Nativa de Hardware:** Suporte completo à captação de Microfone (WebRTC) e leitura segura da Área de Transferência (Clipboard) para colar textos dentro do jogo.
+*   **Tema Material You (MD3):** Interface limpa, cantos arredondados, remoção de banners e poluição visual da dashboard padrão do Boosteroid.
+*   **Immersive Mode:** Bloqueio inteligente da barra de navegação e preenchimento total da tela para aproveitar 100% do display do celular.
 
-## Quick Start
+## ⚠️ Nota Importante sobre o Login
 
-```bash
-# Clone the repo
-git clone https://github.com/azmaveth/termux-android-hello.git
-cd termux-android-hello
+Devido a rígidas políticas de segurança do Google contra ataques MITM, o serviço "Sign in with Google" (Login com o Google) bloqueia acessos originados de WebViews nativos de aplicativos. 
 
-# Install build tools and download android.jar
-bash setup.sh
+**Para utilizar este aplicativo, faça o seu login utilizando o E-mail e Senha diretamente na plataforma do Boosteroid.** Todo o código-fonte deste wrapper é aberto, transparente e livre de rastreadores ou interceptadores de cookies.
 
-# Grant storage access (needed once for installing APKs)
-termux-setup-storage
+## 🛠️ Como Compilar Localmente (Via Termux)
 
-# Build the APK
-bash build.sh
+Você pode compilar e instalar o seu próprio APK diretamente do celular.
 
-# Install on device
-cp build/apk/app.apk ~/storage/shared/ && termux-open ~/storage/shared/app.apk
-```
+1. Instale as dependências e faça o download do Android SDK:
+   ```bash
+   bash setup.sh
+   ```
+2. Conceda permissão de armazenamento (Necessário para salvar o APK na sua galeria/downloads):
+   ```bash
+   termux-setup-storage
+   ```
+3. Compile e construa o pacote:
+   ```bash
+   bash build.sh
+   ```
+4. O arquivo final estará disponível em `build/apk/boosteroid-pad.apk`.
 
-## What setup.sh installs
+## 📜 Licença
 
-| Package | Purpose |
-|---------|---------|
-| `aapt2` | Android resource compiler and linker |
-| `apksigner` | APK signing tool |
-| `dx` | Java bytecode to DEX converter |
-| `zip` | APK packaging |
-
-It also downloads the Android SDK platform JAR (`android.jar` from API 33) which provides the Android framework classes, and generates a debug signing keystore.
-
-## Build Pipeline
-
-The build follows the standard Android build process, just without Gradle:
-
-```
-res/*.xml ──> aapt2 compile ──> *.flat
-                                  │
-AndroidManifest.xml ──> aapt2 link ──> unsigned.apk + R.java
-                                                        │
-*.java + R.java ──> javac ──> *.class ──> dx ──> classes.dex
-                                                      │
-unsigned.apk + classes.dex ──> zip ──> apksigner ──> signed.apk
-```
-
-## Project Structure
-
-```
-.
-├── AndroidManifest.xml          # App manifest
-├── build.sh                     # Build script
-├── setup.sh                     # One-time setup (installs tools)
-├── res/
-│   ├── layout/activity_main.xml # UI layout
-│   └── values/strings.xml       # String resources
-└── src/
-    └── com/example/hello/
-        └── MainActivity.java    # App code
-```
-
-## Limitations
-
-- Java 8 bytecode only (uses `dx` instead of `d8` due to a JDK 21 compatibility issue)
-- No dependency management (no Gradle/Maven)
-- No AndroidX/Jetpack libraries (framework APIs only)
-- No ProGuard/R8 minification
-- No Compose -- XML layouts only
-
-These limitations aside, this approach works well for utility apps, prototypes, personal tools, and learning Android fundamentals.
-
-## Adapting for Your Own App
-
-1. Change the package name in `AndroidManifest.xml` and the directory structure under `src/`
-2. Update `build.sh` to point to your new package/class paths
-3. Add your layouts in `res/layout/` and strings in `res/values/`
-4. Write your Java code -- any Android framework API is available
-
-## License
-
-MIT
+MIT License
