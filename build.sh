@@ -10,6 +10,7 @@ GEN="$BUILD/gen"
 OBJ="$BUILD/obj"
 APK_DIR="$BUILD/apk"
 COMPILED_RES="$BUILD/compiled_res"
+APK_NAME="boosteroid-pad"
 
 if [ ! -f "$ANDROID_JAR" ]; then
     echo "ERROR: android.jar not found at $ANDROID_JAR"
@@ -40,7 +41,7 @@ aapt2 link \
     --manifest "$PROJECT/AndroidManifest.xml" \
     -A assets \
     --java "$GEN" \
-    -o "$APK_DIR/app-unaligned.apk" \
+    -o "$APK_DIR/${APK_NAME}-unaligned.apk" \
     "$COMPILED_RES"/*.flat
 
 echo "=== Step 3: Compile Java ==="
@@ -48,15 +49,15 @@ javac \
     -source 1.8 -target 1.8 \
     -classpath "$ANDROID_JAR" \
     -d "$OBJ" \
-    "$GEN/com/example/hello/R.java" \
-    "$PROJECT/src/com/example/hello/MainActivity.java"
+    "$GEN/com/cloudpad/boosteroid/R.java" \
+    "$PROJECT/src/com/cloudpad/boosteroid/MainActivity.java"
 
 echo "=== Step 4: DEX ==="
 dx --dex --output="$BUILD/classes.dex" "$OBJ"
 
 echo "=== Step 5: Package APK ==="
-cp "$APK_DIR/app-unaligned.apk" "$APK_DIR/app.apk"
-cd "$BUILD" && zip -j "$APK_DIR/app.apk" classes.dex
+cp "$APK_DIR/${APK_NAME}-unaligned.apk" "$APK_DIR/${APK_NAME}.apk"
+cd "$BUILD" && zip -j "$APK_DIR/${APK_NAME}.apk" classes.dex
 cd "$PROJECT"
 
 echo "=== Step 6: Sign ==="
@@ -76,11 +77,11 @@ apksigner sign \
     --ks-key-alias debug \
     --ks-pass pass:android \
     --key-pass pass:android \
-    "$APK_DIR/app.apk"
+    "$APK_DIR/${APK_NAME}.apk"
 
 echo ""
 echo "=== BUILD SUCCESSFUL ==="
-ls -lh "$APK_DIR/app.apk"
+ls -lh "$APK_DIR/${APK_NAME}.apk"
 echo ""
 echo "To install:"
-echo "  cp $APK_DIR/app.apk ~/storage/shared/ && termux-open ~/storage/shared/app.apk"
+echo "  cp $APK_DIR/${APK_NAME}.apk ~/storage/shared/ && termux-open ~/storage/shared/${APK_NAME}.apk"

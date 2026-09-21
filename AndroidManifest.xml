@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.hello"
-    android:versionCode="3"
-    android:versionName="3.0">
+    package="com.cloudpad.boosteroid"
+    android:versionCode="4"
+    android:versionName="4.0">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33" />
     <uses-permission android:name="android.permission.INTERNET" />
     
-    <!-- Permissões necessárias para captura e roteamento de áudio (WebRTC) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 

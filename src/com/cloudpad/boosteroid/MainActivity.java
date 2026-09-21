@@ -1,4 +1,4 @@
-package com.example.hello;
+package com.cloudpad.boosteroid
 
 import android.Manifest;
 import android.app.Activity;
