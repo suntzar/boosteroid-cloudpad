@@ -4,6 +4,9 @@
 echo "=== Preparando o ambiente do Userscript ==="
 mkdir -p dist
 
+# Concatena a pasta de temas em um arquivo provisório
+cat assets/theme/*.css > assets/theme.css
+
 # 1. Converte o CSS nativo para Base64 (sem quebras de linha)
 CSS_BASE64=$(base64 assets/theme.css | tr -d '\n')
 

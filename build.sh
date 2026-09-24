@@ -22,7 +22,7 @@ echo "=== Cleaning build artifacts ==="
 rm -rf "$GEN" "$OBJ" "$APK_DIR" "$COMPILED_RES" "$BUILD/classes.dex"
 mkdir -p "$GEN" "$OBJ" "$APK_DIR" "$COMPILED_RES"
 
-echo "=== Step 0: Bundle Gamepad JS Modules ==="
+echo "=== Step 0: Bundle JS Modules & CSS Themes ==="
 cat assets/gamepad/00_header.js \
     assets/gamepad/01_core.js \
     assets/gamepad/02_layout.js \
@@ -31,6 +31,9 @@ cat assets/gamepad/00_header.js \
     assets/gamepad/05_input.js \
     assets/gamepad/06_init.js \
     assets/gamepad/99_footer.js > assets/gamepad.js
+
+cat assets/theme/*.css > assets/theme.css
+
 
 echo "=== Step 1: Compile resources ==="
 aapt2 compile --dir "$PROJECT/res" -o "$COMPILED_RES/"
