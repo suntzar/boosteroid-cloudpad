@@ -1,42 +1,54 @@
-# Boosteroid CloudPad 🎮
+# Boosteroid CloudPad
 
-Uma aplicação Android nativa, extremamente leve e construída do zero para entregar a melhor experiência de Cloud Gaming no Boosteroid direto do seu smartphone. Sem distrações, com máxima performance.
+Uma aplicação Android nativa e Userscript, desenvolvida do zero para entregar uma experiência otimizada de Cloud Gaming no Boosteroid. Focada em performance, usabilidade e ausência de distrações visuais.
 
-Construído inteiramente via Termux (sem Android Studio, sem Gradle).
+Projeto construído inteiramente via Termux (sem dependência de Android Studio ou Gradle).
 
-## 🚀 Recursos (Features)
+## Recursos Principais
 
 *   **Controle Virtual XInput Completo:** Dual sticks virtuais precisos, D-Pad, Gatilhos (LT/RT), Bumpers (LB/RB) e cliques dos analógicos (L3/R3).
-*   **Modo de Edição Drag & Drop:** Redimensione, reposicione, altere a opacidade e o desfoque de cada botão individualmente. O seu layout é salvo automaticamente no armazenamento local.
-*   **Emulação de Teclado (Shift+Tab):** Converta o botão "HOME" do controle para acionar a interface da Steam nativamente na nuvem.
-*   **Integração Nativa de Hardware:** Suporte completo à captação de Microfone (WebRTC) e leitura segura da Área de Transferência (Clipboard) para colar textos dentro do jogo.
-*   **Tema Material You (MD3):** Interface limpa, cantos arredondados, remoção de banners e poluição visual da dashboard padrão do Boosteroid.
-*   **Immersive Mode:** Bloqueio inteligente da barra de navegação e preenchimento total da tela para aproveitar 100% do display do celular.
+*   **Auto-Toggle Inteligente:** O overlay identifica o roteamento da aplicação (SPA) e habilita o controle virtual automaticamente apenas durante as sessões ativas de streaming.
+*   **Modo de Edição (Drag & Drop):** Redimensione, reposicione, altere a opacidade e o desfoque de cada componente individualmente. O layout é persistido no armazenamento local (`localStorage`).
+*   **Emulação de Teclado Avançada:** Interceptação do botão "HOME" para injeção de eventos de teclado (Shift+Tab), acionando a interface da Steam nativamente na nuvem.
+*   **Integração de Hardware (Ponte Java-JS):** Suporte completo à captação de Microfone (WebRTC), leitura segura da Área de Transferência via `JavascriptInterface` nativa e interceptação de controles internos do Boosteroid através de `MutationObserver`.
+*   **Tema Material You (MD3):** Interface polida, cantos arredondados, remoção de banners e bloqueio de poluição visual/elementos redundantes da dashboard padrão do serviço.
+*   **Immersive Mode (Android):** Ocultação da barra de navegação e preenchimento total da tela (`layoutInDisplayCutoutMode`), com suporte a rotação livre irrestrita (`fullSensor`).
+*   **Cross-Platform:** Disponível como aplicativo Android nativo ou como Userscript independente para navegadores desktop (Tampermonkey/Violentmonkey).
 
-## ⚠️ Nota Importante sobre o Login
+## Autenticação e Segurança
 
-Devido a rígidas políticas de segurança do Google contra ataques MITM, o serviço "Sign in with Google" (Login com o Google) bloqueia acessos originados de WebViews nativos de aplicativos. 
+O aplicativo suporta nativamente o "Sign in with Google" (OAuth). A restrição de segurança padrão imposta pelo Google em ambientes WebView (`disallowed_useragent`) foi solucionada através de um bypass dinâmico de User-Agent, garantindo a autenticação segura do usuário sem a necessidade de expor ou manipular cookies e tokens de sessão.
 
-**Para utilizar este aplicativo, faça o seu login utilizando o E-mail e Senha diretamente na plataforma do Boosteroid.** Todo o código-fonte deste wrapper é aberto, transparente e livre de rastreadores ou interceptadores de cookies.
+## Como Compilar Localmente (Via Termux)
 
-## 🛠️ Como Compilar Localmente (Via Termux)
+O projeto suporta a compilação do APK nativo e a geração do Userscript de forma independente diretamente pelo terminal.
 
-Você pode compilar e instalar o seu próprio APK diretamente do celular.
+### 1. Preparação do Ambiente
+Instale as dependências e realize o download do Android SDK:
+```bash
+bash setup.sh
+```
 
-1. Instale as dependências e faça o download do Android SDK:
-   ```bash
-   bash setup.sh
-   ```
-2. Conceda permissão de armazenamento (Necessário para salvar o APK na sua galeria/downloads):
-   ```bash
-   termux-setup-storage
-   ```
-3. Compile e construa o pacote:
-   ```bash
-   bash build.sh
-   ```
-4. O arquivo final estará disponível em `build/apk/boosteroid-pad.apk`.
+Conceda permissão de armazenamento (necessário para exportar o APK para sua galeria/downloads):
+```bash
+termux-setup-storage
+```
 
-## 📜 Licença
+### 2. Compilar o Aplicativo Android (APK)
+Execute a pipeline de compilação:
+```bash
+bash build.sh
+```
+O pacote final assinado estará disponível em: `build/apk/boosteroid-pad.apk`.
+
+### 3. Compilar o Userscript (Navegadores Desktop)
+Gere o script em arquivo único (`bundle`):
+```bash
+bash build_userscript.sh
+```
+O arquivo final para injeção no Tampermonkey estará disponível em: `dist/boosteroid-cloudpad.user.js`.
+
+## Licença
 
 MIT License
+
