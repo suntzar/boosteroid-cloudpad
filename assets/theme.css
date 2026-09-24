@@ -484,12 +484,12 @@ body .account-content__wrap {
   box-sizing: border-box !important;
 }
 
+/* ATENÇÃO: Apenas as divs finais recebem padding e background para evitar Duplo Padding */
 body .content-box__card,
 body .sync-platform,
 body .hotkey-setting,
 body .account-discord,
-body .connect-account__card,
-body .guide-inner {
+body .guide-card {
   background: var(--md-sys-color-surface-container) !important;
   border-radius: 24px !important;
   border: none !important;
@@ -499,13 +499,53 @@ body .guide-inner {
   box-sizing: border-box !important;
 }
 
+/* Remove os estilos quebrados de contêineres-pai que causavam anomalias no Streaming e Guia */
+body .connect-account__card, body .guide-inner {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+/* =======================================================
+   3. CABEÇALHOS, TÍTULOS E BOTÕES DE AÇÃO (EDITAR PERFIL)
+   ======================================================= */
+/* Refaz a flex-box do Cabeçalho para gerenciar os botões superiores perfeitamente */
+body .content-box__head {
+  display: flex !important;
+  flex-direction: row-reverse !important; /* Coloca Título na Esquerda e Botões na Direita */
+  flex-wrap: wrap !important; /* Permite quebra de linha suave */
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 16px !important;
+  margin-bottom: 16px !important;
+  width: 100% !important;
+}
+
+/* Wrapper do Título + Badge */
+body .content-box__head-info {
+  display: flex !important;
+  align-items: center !important; /* Alinhamento vertical perfeito (Título + Badge "Pode Jogar") */
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  flex-grow: 1 !important; /* Empurra os botões de ação para a direita */
+}
+
+/* Wrapper dos Botões */
+body .content-box__head-controls {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+}
+
+/* Estilização da Fonte do Título */
 body .content-box__head-title,
 body .sync-platform__title,
 body .account-content__discord-title {
   color: var(--md-sys-color-primary) !important;
   font-weight: 600 !important; font-size: 13px !important;
   text-transform: uppercase !important; letter-spacing: 0.5px !important;
-  margin-bottom: 16px !important; padding-left: 8px !important;
+  margin-bottom: 0 !important; /* Removido margin-bottom para não desalinharem da Badge */
 }
 
 body .content-box__text, body .profile-data__other-text,
@@ -514,13 +554,18 @@ body .sync-platform__top-caption {
   color: var(--md-sys-color-outline) !important;
   font-size: 13px !important; line-height: 1.5 !important;
 }
+
+body .connect-account__text, body .connect-account__info {
+  padding: 0 8px !important;
+}
+
 body .profile-data__name, body .subscription-card__title,
 body .sync-platform__username p {
   color: var(--md-sys-color-on-background) !important; font-weight: 600 !important;
 }
 
 /* =======================================================
-   3. TOGGLES MD3 E BADGES
+   4. TOGGLES MD3 E BADGES
    ======================================================= */
 body app-switcher { display: inline-flex !important; align-items: center !important; cursor: pointer !important; }
 body app-switcher svg { width: 44px !important; height: 26px !important; display: block !important; }
@@ -533,18 +578,19 @@ body app-switcher svg.not-active circle { fill: var(--md-sys-color-outline) !imp
 
 /* Badge "PODE JOGAR" (Sai o Verde Neon, entra o Soft Green MD3) */
 body .play-possibility--true {
-  background: #0F5223 !important; /* Verde Escuro Fundo */
-  color: #6DD58C !important; /* Verde Claro Texto */
+  background: #0F5223 !important;
+  color: #6DD58C !important;
   padding: 4px 12px !important;
   border-radius: 100px !important;
   font-weight: 700 !important;
   font-size: 11px !important;
   letter-spacing: 0.5px !important;
   text-transform: uppercase !important;
+  margin: 0 !important;
 }
 
 /* =======================================================
-   4. A MINHA SUBSCRIÇÃO
+   5. A MINHA SUBSCRIÇÃO
    ======================================================= */
 body .subscription-card__current { display: flex !important; flex-direction: column !important; gap: 16px !important; }
 body .subscription-card__header { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; flex-wrap: wrap !important; gap: 12px !important; }
@@ -552,13 +598,12 @@ body .subscription-card__status { background: var(--md-sys-color-surface-variant
 body .subscription-card__footer { display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 16px !important; background: transparent !important; padding: 0 !important; border: none !important; }
 
 /* =======================================================
-   5. LIGAÇÕES (STEAM, XBOX, WOT, YOUTUBE) E BOTÕES
+   6. LIGAÇÕES (STEAM, XBOX, WOT, YOUTUBE) E BOTÕES
    ======================================================= */
-body .sync-platform, body .connect-account__card { display: flex !important; flex-direction: column !important; gap: 16px !important; }
+body .sync-platform { display: flex !important; flex-direction: column !important; gap: 16px !important; }
 body .sync-platform__body, body .content-box__flex-line { display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 16px !important; }
 body .sync-platform__left-side { display: flex !important; align-items: center !important; gap: 12px !important; }
 
-/* O SEGREDOS DOS BOTÕES: Força a NÃO esticarem e padroniza a estética */
 body .sync-platform__button, body .content-box__control-btn, 
 body .subscription-card__info-button, body .hotkey-setting__reset-btn {
   background: var(--md-sys-color-surface-variant) !important;
@@ -568,18 +613,16 @@ body .subscription-card__info-button, body .hotkey-setting__reset-btn {
   display: flex !important; align-items: center !important; justify-content: center !important;
   gap: 8px !important; border: none !important; box-shadow: none !important;
   height: auto !important; margin: 0 !important;
-  width: max-content !important; /* IMPEDE BOTÕES DE ESTICAREM */
-  flex: none !important; /* IMPEDE BOTÕES DE ESTICAREM */
-  text-transform: none !important; /* Remove o ALL CAPS feio do Boosteroid */
+  width: max-content !important; flex: none !important;
+  text-transform: none !important; 
 }
 body .sync-platform__buttons { display: flex !important; gap: 12px !important; flex-wrap: wrap !important; justify-content: flex-end !important; }
 
-/* Formatação fina de ícones dentro dos botões */
 body .sync-platform__button p, body .content-box__control-btn span { color: var(--md-sys-color-on-background) !important; margin: 0 !important; text-transform: capitalize !important; }
 body .content-box__control-btn svg path { fill: var(--md-sys-color-on-background) !important; }
 body .sync-platform__button img, body .content-box__control-btn img { 
   width: 18px !important; height: 18px !important; object-fit: contain !important;
-  filter: brightness(0) invert(1) opacity(0.9) !important; /* Remove as cores estranhas originais (como o rosa) */
+  filter: brightness(0) invert(1) opacity(0.9) !important; 
 }
 
 /* Tratamento visual para Botões de Erro/Desconectar */
@@ -591,23 +634,22 @@ body .content-box__controls--pb .content-box__control-btn svg path { fill: #ffb4
 body .sync-platform__top { display: flex !important; flex-direction: column !important; gap: 4px !important; padding-top: 12px !important; border-top: 1px solid var(--md-sys-color-surface-variant) !important; }
 
 /* =======================================================
-   6. CONVÍVIO (DISCORD E TELEGRAM)
+   7. CONVÍVIO (DISCORD E TELEGRAM)
    ======================================================= */
 body .account-discord { display: flex !important; justify-content: space-between !important; align-items: center !important; text-decoration: none !important; padding: 16px 20px !important; }
 body .account-discord:hover { background: var(--md-sys-color-surface-container-high) !important; }
 body .account-discord__inner { display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; gap: 16px !important; }
 body .account-discord__inner h3 { color: var(--md-sys-color-on-background) !important; font-weight: 600 !important; font-size: 14px !important; margin: 0 !important; }
-/* Garante que a logo do Discord/Telegram não distorça */
 body .account-discord__inner img { height: 32px !important; width: auto !important; object-fit: contain !important; }
 
 /* =======================================================
-   7. RODAPÉ (FOOTER)
+   8. RODAPÉ (FOOTER)
    ======================================================= */
 body .footer { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 24px !important; padding: 24px !important; }
 body .footer__menu { display: flex !important; gap: 16px !important; flex-wrap: wrap !important; justify-content: center !important; padding: 0 !important; list-style: none !important; }
 body .footer__menu a { color: var(--md-sys-color-outline) !important; text-decoration: none !important; font-size: 13px !important; font-weight: 500 !important; transition: color 0.2s !important; }
 body .footer__menu a:hover { color: var(--md-sys-color-primary) !important; }
-/* Refina o botão de "Eliminar Conta" para ser um botão Outlined de Erro */
+
 body .footer__delete-account {
   background: transparent !important;
   color: #ffb4ab !important;
@@ -621,7 +663,7 @@ body .footer__delete-account {
 }
 
 /* =======================================================
-   8. DETALHES DE LAYOUT E FORMS (AVATAR E DROPDOWN)
+   9. DETALHES DE LAYOUT E FORMS (AVATAR E DROPDOWN)
    ======================================================= */
 body .select__main.select__main { background: var(--md-sys-color-surface-variant) !important; border-radius: 100px !important; padding: 10px 20px !important; color: var(--md-sys-color-on-background) !important; font-weight: 500 !important; }
 body hr { border-color: var(--md-sys-color-surface-variant) !important; margin: 24px 0 !important; opacity: 0.5 !important; }
@@ -636,7 +678,7 @@ body .warning svg path { fill: var(--md-sys-color-primary) !important; }
   body .user-info__profile-img { margin-right: 0 !important; margin-bottom: 16px !important; }
   body .user-info__profile-data { align-items: center !important; width: 100% !important; }
   body .profile-data__socials-item, body .profile-data__other-item { justify-content: center !important; }
-  body .content-box__head-controls { width: 100% !important; justify-content: center !important; }
+  
   body .sync-platform__body { flex-direction: column !important; align-items: flex-start !important; gap: 20px !important; }
   body .sync-platform__buttons { width: 100% !important; justify-content: space-between !important; }
   body .sync-platform__button { flex: 1 !important; justify-content: center !important; }
