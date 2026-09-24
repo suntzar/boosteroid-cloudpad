@@ -19,7 +19,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="Boosteroid Pad"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="fullSensor"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
