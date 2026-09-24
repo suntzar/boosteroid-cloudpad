@@ -484,7 +484,6 @@ body .account-content__wrap {
   box-sizing: border-box !important;
 }
 
-/* ATENÇÃO: Apenas as divs finais recebem padding e background para evitar Duplo Padding */
 body .content-box__card,
 body .sync-platform,
 body .hotkey-setting,
@@ -499,7 +498,7 @@ body .guide-card {
   box-sizing: border-box !important;
 }
 
-/* Remove os estilos quebrados de contêineres-pai que causavam anomalias no Streaming e Guia */
+/* Remove estilos de containers para evitar duplo padding */
 body .connect-account__card, body .guide-inner {
   background: transparent !important;
   padding: 0 !important;
@@ -510,11 +509,10 @@ body .connect-account__card, body .guide-inner {
 /* =======================================================
    3. CABEÇALHOS, TÍTULOS E BOTÕES DE AÇÃO (EDITAR PERFIL)
    ======================================================= */
-/* Refaz a flex-box do Cabeçalho para gerenciar os botões superiores perfeitamente */
 body .content-box__head {
   display: flex !important;
-  flex-direction: row-reverse !important; /* Coloca Título na Esquerda e Botões na Direita */
-  flex-wrap: wrap !important; /* Permite quebra de linha suave */
+  flex-direction: row-reverse !important; 
+  flex-wrap: wrap !important; 
   justify-content: flex-end !important;
   align-items: center !important;
   gap: 16px !important;
@@ -522,30 +520,27 @@ body .content-box__head {
   width: 100% !important;
 }
 
-/* Wrapper do Título + Badge */
 body .content-box__head-info {
   display: flex !important;
-  align-items: center !important; /* Alinhamento vertical perfeito (Título + Badge "Pode Jogar") */
+  align-items: center !important; 
   flex-wrap: wrap !important;
   gap: 12px !important;
-  flex-grow: 1 !important; /* Empurra os botões de ação para a direita */
+  flex-grow: 1 !important; 
 }
 
-/* Wrapper dos Botões */
 body .content-box__head-controls {
   display: flex !important;
   flex-wrap: wrap !important;
   gap: 12px !important;
 }
 
-/* Estilização da Fonte do Título */
 body .content-box__head-title,
 body .sync-platform__title,
 body .account-content__discord-title {
   color: var(--md-sys-color-primary) !important;
   font-weight: 600 !important; font-size: 13px !important;
   text-transform: uppercase !important; letter-spacing: 0.5px !important;
-  margin-bottom: 0 !important; /* Removido margin-bottom para não desalinharem da Badge */
+  margin-bottom: 0 !important; 
 }
 
 body .content-box__text, body .profile-data__other-text,
@@ -555,9 +550,7 @@ body .sync-platform__top-caption {
   font-size: 13px !important; line-height: 1.5 !important;
 }
 
-body .connect-account__text, body .connect-account__info {
-  padding: 0 8px !important;
-}
+body .connect-account__text, body .connect-account__info { padding: 0 8px !important; }
 
 body .profile-data__name, body .subscription-card__title,
 body .sync-platform__username p {
@@ -576,7 +569,6 @@ body app-switcher svg:not(.not-active) circle { fill: var(--md-sys-color-primary
 body app-switcher svg.not-active rect { fill: var(--md-sys-color-surface-variant) !important; opacity: 1 !important; }
 body app-switcher svg.not-active circle { fill: var(--md-sys-color-outline) !important; }
 
-/* Badge "PODE JOGAR" (Sai o Verde Neon, entra o Soft Green MD3) */
 body .play-possibility--true {
   background: #0F5223 !important;
   color: #6DD58C !important;
@@ -598,12 +590,13 @@ body .subscription-card__status { background: var(--md-sys-color-surface-variant
 body .subscription-card__footer { display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 16px !important; background: transparent !important; padding: 0 !important; border: none !important; }
 
 /* =======================================================
-   6. LIGAÇÕES (STEAM, XBOX, WOT, YOUTUBE) E BOTÕES
+   6. LIGAÇÕES E STREAMING (BOTÕES E LIMPEZA DE ÍCONES)
    ======================================================= */
 body .sync-platform { display: flex !important; flex-direction: column !important; gap: 16px !important; }
 body .sync-platform__body, body .content-box__flex-line { display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 16px !important; }
 body .sync-platform__left-side { display: flex !important; align-items: center !important; gap: 12px !important; }
 
+/* Botões Tonal MD3 padronizados */
 body .sync-platform__button, body .content-box__control-btn, 
 body .subscription-card__info-button, body .hotkey-setting__reset-btn {
   background: var(--md-sys-color-surface-variant) !important;
@@ -618,23 +611,26 @@ body .subscription-card__info-button, body .hotkey-setting__reset-btn {
 }
 body .sync-platform__buttons { display: flex !important; gap: 12px !important; flex-wrap: wrap !important; justify-content: flex-end !important; }
 
-body .sync-platform__button p, body .content-box__control-btn span { color: var(--md-sys-color-on-background) !important; margin: 0 !important; text-transform: capitalize !important; }
-body .content-box__control-btn svg path { fill: var(--md-sys-color-on-background) !important; }
-body .sync-platform__button img, body .content-box__control-btn img { 
-  width: 18px !important; height: 18px !important; object-fit: contain !important;
-  filter: brightness(0) invert(1) opacity(0.9) !important; 
+/* Texto dos Botões */
+body .sync-platform__button p, body .content-box__control-btn span { 
+  color: var(--md-sys-color-on-background) !important; margin: 0 !important; text-transform: capitalize !important; 
 }
 
-/* Tratamento visual para Botões de Erro/Desconectar */
-body .sync-platform__button:first-child p,
-body .content-box__controls--pb .content-box__control-btn span { color: #ffb4ab !important; }
-body .sync-platform__button:first-child img { filter: invert(75%) sepia(21%) saturate(1476%) hue-rotate(309deg) brightness(101%) contrast(105%) !important; }
-body .content-box__controls--pb .content-box__control-btn svg path { fill: #ffb4ab !important; }
+/* REMOÇÃO TOTAL DOS ÍCONES ROSAS/QUEBRADOS NOS BOTÕES DE AÇÃO */
+body .sync-platform__button img,
+body .sync-platform__button svg-icon,
+body .content-box__controls--pb .content-box__control-btn img,
+body .content-box__controls--pb .content-box__control-btn svg-icon {
+  display: none !important;
+}
+
+/* Mantém os ícones funcionais (Editar Perfil, Alterar Senha) com a cor correta */
+body .content-box__control-btn svg path { fill: var(--md-sys-color-on-background) !important; }
 
 body .sync-platform__top { display: flex !important; flex-direction: column !important; gap: 4px !important; padding-top: 12px !important; border-top: 1px solid var(--md-sys-color-surface-variant) !important; }
 
 /* =======================================================
-   7. CONVÍVIO (DISCORD E TELEGRAM)
+   7. CONVÍVIO E RODAPÉ
    ======================================================= */
 body .account-discord { display: flex !important; justify-content: space-between !important; align-items: center !important; text-decoration: none !important; padding: 16px 20px !important; }
 body .account-discord:hover { background: var(--md-sys-color-surface-container-high) !important; }
@@ -642,28 +638,19 @@ body .account-discord__inner { display: flex !important; justify-content: space-
 body .account-discord__inner h3 { color: var(--md-sys-color-on-background) !important; font-weight: 600 !important; font-size: 14px !important; margin: 0 !important; }
 body .account-discord__inner img { height: 32px !important; width: auto !important; object-fit: contain !important; }
 
-/* =======================================================
-   8. RODAPÉ (FOOTER)
-   ======================================================= */
 body .footer { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 24px !important; padding: 24px !important; }
 body .footer__menu { display: flex !important; gap: 16px !important; flex-wrap: wrap !important; justify-content: center !important; padding: 0 !important; list-style: none !important; }
 body .footer__menu a { color: var(--md-sys-color-outline) !important; text-decoration: none !important; font-size: 13px !important; font-weight: 500 !important; transition: color 0.2s !important; }
 body .footer__menu a:hover { color: var(--md-sys-color-primary) !important; }
 
 body .footer__delete-account {
-  background: transparent !important;
-  color: #ffb4ab !important;
-  border: 1px solid #ffb4ab !important;
-  border-radius: 100px !important;
-  padding: 10px 24px !important;
-  font-weight: 600 !important;
-  font-size: 13px !important;
-  text-transform: none !important;
-  cursor: pointer !important;
+  background: transparent !important; color: #ffb4ab !important; border: 1px solid #ffb4ab !important;
+  border-radius: 100px !important; padding: 10px 24px !important; font-weight: 600 !important;
+  font-size: 13px !important; text-transform: none !important; cursor: pointer !important;
 }
 
 /* =======================================================
-   9. DETALHES DE LAYOUT E FORMS (AVATAR E DROPDOWN)
+   8. DETALHES GERAIS
    ======================================================= */
 body .select__main.select__main { background: var(--md-sys-color-surface-variant) !important; border-radius: 100px !important; padding: 10px 20px !important; color: var(--md-sys-color-on-background) !important; font-weight: 500 !important; }
 body hr { border-color: var(--md-sys-color-surface-variant) !important; margin: 24px 0 !important; opacity: 0.5 !important; }
@@ -672,7 +659,7 @@ body .warning { background: rgba(245, 200, 0, 0.1) !important; border: 1px solid
 body .warning p { margin: 0 !important; font-size: 13px !important; color: var(--md-sys-color-on-background) !important; line-height: 1.5 !important; }
 body .warning svg path { fill: var(--md-sys-color-primary) !important; }
 
-/* Correções específicas para Mobile (Telas pequenas) */
+/* Correções específicas para Mobile */
 @media (max-width: 600px) {
   body .user-info .content-box__card { flex-direction: column !important; align-items: center !important; text-align: center !important; }
   body .user-info__profile-img { margin-right: 0 !important; margin-bottom: 16px !important; }
