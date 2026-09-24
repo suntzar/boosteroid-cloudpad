@@ -29,31 +29,32 @@ body library {
 body filter-list tabs.tabs,
 body .tabs.tabs,
 body .tabs-inner.tabs-inner {
-  align-items: center !important; 
+  align-items: center !important;
 }
 
 /* Adiciona um padding confortável (respiro) na barra de controle de filtros */
 filter-controller-widget {
   padding-top: 16px !important;
-  padding-bottom: 16px !important; 
+  padding-bottom: 16px !important;
 }
 
 /* =======================================================
    2. PALETA DE CORES MATERIAL YOU (GOLD & DARK THEME)
    ======================================================= */
-:root, * {
+:root,
+* {
   /* Cores Principais (Amarelo Dourado Premium e Marrom Escuro) */
   --md-sys-color-primary: #f5c800 !important;
   --md-sys-color-on-primary: #523413 !important;
   --md-sys-color-primary-container: #f5c800 !important;
   --md-sys-color-on-primary-container: #523413 !important;
-  
+
   /* Fundos e Superfícies (Grafite Profundo) */
   --md-sys-color-background: #1C1B1F !important;
   --md-sys-color-on-background: #E6E1E5 !important;
   --md-sys-color-surface: #1C1B1F !important;
   --md-sys-color-surface-variant: #49454F !important;
-  
+
   /* Containers e Contornos */
   --md-sys-color-surface-container: #2B2930 !important;
   --md-sys-color-surface-container-high: #36343B !important;
@@ -64,10 +65,15 @@ filter-controller-widget {
    3. FUNDO, CABEÇALHO E PAINÉIS DE INFORMAÇÃO
    ======================================================= */
 /* Aplica o fundo escuro global e força a fonte padrão do sistema operacional */
-html, body, body app-root, body .main-app, body .wrapper, body .dashboard {
+html,
+body,
+body app-root,
+body .main-app,
+body .wrapper,
+body .dashboard {
   background: var(--md-sys-color-background) !important;
   background-color: var(--md-sys-color-background) !important;
-  background-image: none !important; 
+  background-image: none !important;
   color: var(--md-sys-color-on-background) !important;
   font-family: system-ui, Roboto, sans-serif !important;
 }
@@ -78,8 +84,10 @@ body .header.header {
   background-image: none !important;
   border-bottom: 1px solid var(--md-sys-color-surface-variant) !important;
 }
-body .header::before, body .header::after { 
-  display: none !important; 
+
+body .header::before,
+body .header::after {
+  display: none !important;
 }
 
 /* Painel da barra de pesquisa e menus dropdown (fundo limpo) */
@@ -102,7 +110,7 @@ application-short-info {
    4. BOTÕES, ABAS, SELECTS E FILTROS (PILL SHAPES)
    ======================================================= */
 /* Botões Principais Destacados (Ex: Jogar, Assinar) */
-body .primary-button.primary-button, 
+body .primary-button.primary-button,
 body .button-primary.button-primary {
   background: var(--md-sys-color-primary) !important;
   background-image: none !important;
@@ -113,9 +121,12 @@ body .button-primary.button-primary {
   box-shadow: none !important;
   border: none !important;
 }
-body .primary-button::before, body .button-primary::before,
-body .primary-button::after, body .button-primary::after { 
-  display: none !important; 
+
+body .primary-button::before,
+body .button-primary::before,
+body .primary-button::after,
+body .button-primary::after {
+  display: none !important;
 }
 
 /* Barra de Pesquisa (Input) */
@@ -131,7 +142,7 @@ body .secondary-button,
 body .application__controls-store,
 body .filter-menu-button.filter-menu-button {
   border-radius: 100px !important;
-  border: 0px solid var(--md-sys-color-surface-variant) !important; 
+  border: 0px solid var(--md-sys-color-surface-variant) !important;
   background-color: var(--md-sys-color-surface-container) !important;
   color: var(--md-sys-color-on-background) !important;
   text-transform: none !important;
@@ -144,8 +155,10 @@ body .filter-menu-button.filter-menu-button {
   margin: 0 !important;
   box-shadow: none !important;
 }
-body .tab-button::before, body .tab-button::after { 
-  display: none !important; 
+
+body .tab-button::before,
+body .tab-button::after {
+  display: none !important;
 }
 
 /* Estados de Seleção (Quando uma Aba ou Filtro está ativo) */
@@ -158,8 +171,14 @@ body .filter-menu-button--isDirty.filter-menu-button--isDirty {
 }
 
 /* Força ícones SVG internos a herdarem a cor do texto corretamente */
-body .filter-menu-button.filter-menu-button p { color: inherit !important; }
-body .filter-menu-button.filter-menu-button svg { fill: currentColor !important; color: currentColor !important; }
+body .filter-menu-button.filter-menu-button p {
+  color: inherit !important;
+}
+
+body .filter-menu-button.filter-menu-button svg {
+  fill: currentColor !important;
+  color: currentColor !important;
+}
 
 /* Dropdowns / Selects (Listas de Plataformas) */
 body .select.select {
@@ -167,6 +186,7 @@ body .select.select {
   box-shadow: none !important;
   border: none !important;
 }
+
 body .select__main.select__main {
   background: var(--md-sys-color-surface-variant) !important;
   border-radius: 100px !important;
@@ -176,7 +196,7 @@ body .select__main.select__main {
 /* Filtros em Checkbox (Transformados em "Chips" do MD3) */
 body .checkbox-button.checkbox-button {
   background-color: var(--md-sys-color-surface-container) !important;
-  border: 0px solid var(--md-sys-color-surface-variant) !important; 
+  border: 0px solid var(--md-sys-color-surface-variant) !important;
   border-radius: 100px !important;
   box-shadow: none !important;
   padding: 0 16px !important;
@@ -185,16 +205,23 @@ body .checkbox-button.checkbox-button {
   display: flex !important;
   align-items: center !important;
 }
+
 body .checkbox-button.active.checkbox-button {
   background: var(--md-sys-color-primary-container) !important;
   border-color: transparent !important;
 }
-body .checkbox__checkmark { display: none !important; /* Esconde o quadrado nativo do checkbox */ }
+
+body .checkbox__checkmark {
+  display: none !important;
+  /* Esconde o quadrado nativo do checkbox */
+}
+
 body .checkbox__label {
   padding-left: 0 !important;
   color: var(--md-sys-color-on-background) !important;
   font-weight: 500 !important;
 }
+
 body .checkbox-button.active.checkbox-button .checkbox__label {
   color: var(--md-sys-color-on-primary-container) !important;
 }
@@ -208,7 +235,7 @@ body .store-item__overlay,
 body .store-item__install-showcase {
   background: var(--md-sys-color-surface-container) !important;
   background-color: var(--md-sys-color-surface-container) !important;
-  background-image: none !important; 
+  background-image: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   border: none !important;
@@ -236,11 +263,14 @@ body .item-game-in--add .store-item__surface::before {
 }
 
 /* Animação suave de flutuação ao passar o mouse ou tocar */
-body .store-item.store-item { transition: transform 0.2s ease !important; }
+body .store-item.store-item {
+  transition: transform 0.2s ease !important;
+}
+
 body .store-item:hover .store-item__surface,
 body .store-item.store-item--hovered .store-item__surface {
   transform: translateY(-4px) !important;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.4) !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
   background: var(--md-sys-color-surface-container-high) !important;
   background-image: none !important;
 }
@@ -249,23 +279,24 @@ body .store-item.store-item--hovered .store-item__surface {
 body .store-item__overlay {
   background: rgba(28, 27, 31, 0.5) !important;
 }
-body .store-item:hover .store-item__overlay { 
-  background: rgba(28, 27, 31, 0.85) !important; 
+
+body .store-item:hover .store-item__overlay {
+  background: rgba(28, 27, 31, 0.85) !important;
 }
 
 /* Títulos dos jogos mais legíveis e sem sombras cafonas */
 body .item-game-in__content h4 {
   color: var(--md-sys-color-on-background) !important;
   font-weight: 600 !important;
-  text-shadow: none !important; 
+  text-shadow: none !important;
 }
 
 /* =======================================================
    6. BADGES, ETIQUETAS E PLATAFORMAS
    ======================================================= */
 /* Padroniza as etiquetas de "Novo", "Steam", "Epic" com visual pílula e cor neutra */
-body .app-badge, 
-body .store-item__new-label, 
+body .app-badge,
+body .store-item__new-label,
 body .hopper__badge,
 body .store-item__platform,
 body .button-under.button-under {
@@ -275,6 +306,7 @@ body .button-under.button-under {
   border: none !important;
   border-radius: 100px !important;
 }
+
 body .app-badge .app-badge__text {
   color: var(--md-sys-color-on-background) !important;
 }
@@ -283,8 +315,8 @@ body .app-badge .app-badge__text {
    7. LIMPEZA DE INTERFACE (REMOÇÃO DE BANNERS E POLUIÇÃO)
    ======================================================= */
 /* Oculta os "Upstronauts" (Masotes), Promoções e Selos de Desconto */
-cloud-hopper-item, 
-.hopper-item, 
+cloud-hopper-item,
+.hopper-item,
 .hopper,
 body card-promo,
 body .store-item__promo,
@@ -324,7 +356,8 @@ body .magic-button.magic-button {
   border-radius: 100px !important;
   box-shadow: none !important;
 }
-body .magic-button__glow, 
+
+body .magic-button__glow,
 body .magic-button__fill,
 body .magic-button__shimmer,
 body .magic-button__ring,
@@ -364,9 +397,9 @@ body .store-item__control-button--secondary.store-item__control-button--secondar
 /* Injeção de Ícone de Lixeira no botão de remover, ocultando o hifen (-) original */
 body .store-item__control-button--secondary .secondary-button {
   background: var(--md-sys-color-surface-variant) !important;
-  color: transparent !important; 
+  color: transparent !important;
   border: none !important;
-  border-radius: 100px !important; 
+  border-radius: 100px !important;
   width: 100% !important;
   height: 100% !important;
   padding: 0 !important;
@@ -374,9 +407,11 @@ body .store-item__control-button--secondary .secondary-button {
   box-shadow: none !important;
   transition: background 0.2s ease !important;
 }
+
 body .store-item__control-button--secondary .secondary-button:hover {
   background: var(--md-sys-color-outline) !important;
 }
+
 body .store-item__control-button--secondary .secondary-button::after {
   content: "" !important;
   position: absolute !important;
