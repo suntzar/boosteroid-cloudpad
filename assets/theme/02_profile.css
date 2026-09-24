@@ -1,67 +1,59 @@
 /* ==========================================================================
    TEMA MATERIAL YOU (MD3) - PÁGINA DE PERFIL E CONFIGURAÇÕES
-   Descrição: Responsividade e injeção do estilo MD3 nas contas e ajustes.
+   Descrição: Estilização premium e correção responsiva de todas as contas e ajustes.
    ========================================================================== */
 
-/* 1. LAYOUT GERAL E RESPONSIVIDADE DO WRAPPER */
+/* =======================================================
+   1. LAYOUT GERAL E NAVEGAÇÃO RESPONSIVA (SIDEBAR)
+   ======================================================= */
 body .profile .wrapper {
   display: flex !important;
   max-width: 100% !important;
   padding: 0 !important;
   gap: 16px !important;
+  box-sizing: border-box !important;
 }
 
-/* 2. SIDEBAR (MENU LATERAL) RESPONSIVO */
-/* Transforma a barra lateral espremida em um menu horizontal no topo da tela em mobiles */
+/* Títulos das Seções (A minha conta, Ligações, etc) */
+body .account__heading {
+  color: var(--md-sys-color-on-background) !important;
+  font-size: 24px !important;
+  padding: 24px 12px 16px 12px !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+}
+
+/* Transforma a barra lateral em um menu de rolagem horizontal elegante em mobiles */
 @media (max-width: 900px) {
-  body .profile .wrapper {
-    flex-direction: column !important;
-  }
+  body .profile .wrapper { flex-direction: column !important; gap: 0 !important; }
   body sidebar {
-    width: 100% !important;
-    height: auto !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 100 !important;
+    width: 100% !important; height: auto !important;
+    position: sticky !important; top: 0 !important; z-index: 100 !important;
     background: var(--md-sys-color-background) !important;
     border-bottom: 1px solid var(--md-sys-color-surface-variant) !important;
   }
-  body .profile__navigation {
-    width: 100% !important;
-    padding: 0 !important;
-  }
-  body .profile__navigation-gradient {
-    display: none !important;
-  }
+  body .profile__navigation { width: 100% !important; padding: 0 !important; }
+  body .profile__navigation-gradient { display: none !important; }
   body .profile__main-menu {
-    display: flex !important;
-    flex-direction: row !important;
-    overflow-x: auto !important;
-    gap: 8px !important;
-    padding: 12px 16px !important;
-    margin: 0 !important;
+    display: flex !important; flex-direction: row !important;
+    overflow-x: auto !important; gap: 8px !important;
+    padding: 12px 16px !important; margin: 0 !important;
+    -webkit-overflow-scrolling: touch !important; /* Rolagem suave no mobile */
   }
-  body .profile__main-menu li {
-    flex: 0 0 auto !important;
-    margin: 0 !important;
-  }
+  body .profile__main-menu li { flex: 0 0 auto !important; margin: 0 !important; }
   body .profile__main-menu a {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    padding: 8px 16px !important;
-    border-radius: 100px !important;
+    display: flex !important; align-items: center !important;
+    padding: 8px 16px !important; border-radius: 100px !important;
     background: var(--md-sys-color-surface-container) !important;
     color: var(--md-sys-color-on-background) !important;
+    white-space: nowrap !important; /* CORREÇÃO: Impede quebra de texto e deformação */
+    font-weight: 500 !important;
   }
   body .profile__main-menu a.active {
     background: var(--md-sys-color-primary-container) !important;
     color: var(--md-sys-color-on-primary-container) !important;
   }
-  body .profile__main-menu a svg {
-    margin-bottom: 0 !important;
-    margin-right: 8px !important;
-  }
+  body .profile__main-menu a svg { margin-bottom: 0 !important; margin-right: 8px !important; }
   body .profile__main-menu a.active svg path,
   body .profile__main-menu a.active svg ellipse,
   body .profile__main-menu a.active svg rect {
@@ -69,174 +61,199 @@ body .profile .wrapper {
   }
 }
 
-/* 3. CONTAINERS E CARTÕES (MD3 CARDS) */
-/* Garante que o contêiner interno não vaze da tela */
+/* =======================================================
+   2. PADRONIZAÇÃO DE CARDS E CONTAINERS (MD3)
+   ======================================================= */
+/* Previne overflow horizontal que quebra a tela no celular */
 body .account__content,
 body .account-content__wrap {
   max-width: 100% !important;
   padding: 0 8px !important;
+  box-sizing: border-box !important;
 }
 
+/* Todos os cartões assumem a elevação MD3 */
 body .content-box__card,
 body .sync-platform,
 body .hotkey-setting,
 body .account-discord,
-body .subscription-card {
+body .connect-account__card,
+body .guide-inner {
   background: var(--md-sys-color-surface-container) !important;
   border-radius: 24px !important;
   border: none !important;
   box-shadow: none !important;
   padding: 20px !important;
   margin-bottom: 16px !important;
-  transition: background 0.3s ease !important;
-}
-
-/* 4. TÍTULOS E TIPOGRAFIA */
-body .account__heading {
-  color: var(--md-sys-color-on-background) !important;
-  font-size: 24px !important;
-  padding: 16px 8px !important;
+  box-sizing: border-box !important;
 }
 
 body .content-box__head-title,
 body .sync-platform__title,
 body .account-content__discord-title {
   color: var(--md-sys-color-primary) !important;
-  font-weight: 600 !important;
-  font-size: 13px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  margin-bottom: 12px !important;
+  font-weight: 600 !important; font-size: 13px !important;
+  text-transform: uppercase !important; letter-spacing: 0.5px !important;
+  margin-bottom: 16px !important; padding-left: 8px !important;
 }
 
-body .content-box__text,
-body .profile-data__other-text,
-body .hotkey-setting__description,
-body .connect-account__info-text {
+body .content-box__text, body .profile-data__other-text,
+body .hotkey-setting__description, body .connect-account__info-text,
+body .sync-platform__top-caption {
   color: var(--md-sys-color-outline) !important;
-  font-size: 13px !important;
-  line-height: 1.5 !important;
+  font-size: 13px !important; line-height: 1.5 !important;
 }
-
-body .profile-data__name,
-body .subscription-card__title,
+body .profile-data__name, body .subscription-card__title,
 body .sync-platform__username p {
-  color: var(--md-sys-color-on-background) !important;
+  color: var(--md-sys-color-on-background) !important; font-weight: 600 !important;
 }
 
-/* 5. TOGGLES (SWITCHERS MD3 STYLE INSPIRADOS NA IMAGEM DE REFERÊNCIA) */
-body app-switcher svg {
-  width: 52px !important;
-  height: 32px !important;
-  overflow: visible !important;
+/* =======================================================
+   3. SOLUÇÃO DEFINITIVA DOS TOGGLES (INTERRUPTORES CSS PURO)
+   ======================================================= */
+/* Oculta o SVG deformado nativo do Boosteroid */
+body app-switcher svg { display: none !important; }
+
+/* Recria o switch inteiramente via CSS pseudo-elements para visual MD3 impecável */
+body app-switcher {
+  position: relative !important; display: inline-block !important;
+  width: 52px !important; height: 32px !important;
+  border-radius: 16px !important; cursor: pointer !important;
+  flex-shrink: 0 !important; /* Impede que o botão seja esmagado em telas pequenas */
+  transition: background 0.3s ease !important;
 }
-body app-switcher svg rect {
-  width: 52px !important;
-  height: 32px !important;
-  y: 0 !important;
-  rx: 16px !important;
-  transition: all 0.3s ease !important;
-}
-body app-switcher svg circle {
-  r: 12px !important;
-  cy: 16px !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* Thumb (A bolinha do interruptor) */
+body app-switcher::after {
+  content: '' !important; position: absolute !important;
+  width: 24px !important; height: 24px !important;
+  top: 4px !important; left: 4px !important;
+  border-radius: 50% !important;
+  transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s ease !important;
 }
 
-/* Toggle Ativo (Trilho Amarelo / Thumb Marrom Escuro) */
-body app-switcher:not(.not-active) svg rect {
-  fill: var(--md-sys-color-primary) !important;
-  opacity: 1 !important;
-}
-body app-switcher:not(.not-active) svg circle {
-  fill: var(--md-sys-color-on-primary) !important;
-  cx: 36px !important;
-}
+/* Estado: DESATIVADO (Fundo Cinza / Bolinha Escura) */
+body app-switcher.not-active { background: var(--md-sys-color-surface-variant) !important; }
+body app-switcher.not-active::after { background: var(--md-sys-color-outline) !important; left: 4px !important; }
 
-/* Toggle Inativo (Trilho Escuro / Thumb Claro) */
-body app-switcher.not-active svg rect {
-  fill: var(--md-sys-color-surface-variant) !important;
-  opacity: 1 !important;
-}
-body app-switcher.not-active svg circle {
-  fill: var(--md-sys-color-outline) !important;
-  cx: 16px !important;
-}
+/* Estado: ATIVADO (Fundo Amarelo / Bolinha Marrom Escuro) */
+body app-switcher:not(.not-active) { background: var(--md-sys-color-primary) !important; }
+body app-switcher:not(.not-active)::after { background: var(--md-sys-color-on-primary) !important; left: 24px !important; }
 
-/* 6. BOTÕES DE AÇÃO E INPUTS DE FORMULÁRIO */
-body .content-box__control-btn,
-body .subscription-card__info-button,
-body .sync-platform__button,
-body .hotkey-setting__button,
-body .hotkey-setting__reset-btn {
+/* =======================================================
+   4. A MINHA SUBSCRIÇÃO (REESTRUTURAÇÃO COMPLETA)
+   ======================================================= */
+/* Remove qualquer herança quebrada e reorganiza em Flexbox limpo */
+body .subscription-card__current {
+  display: flex !important; flex-direction: column !important; gap: 16px !important;
+}
+body .subscription-card__header {
+  display: flex !important; justify-content: space-between !important;
+  align-items: flex-start !important; flex-wrap: wrap !important; gap: 12px !important;
+}
+body .subscription-card__status {
   background: var(--md-sys-color-surface-variant) !important;
   color: var(--md-sys-color-on-background) !important;
-  border-radius: 100px !important;
-  padding: 10px 20px !important;
-  font-weight: 500 !important;
-  font-size: 13px !important;
-  border: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  text-transform: none !important;
+  padding: 4px 12px !important; border-radius: 100px !important;
+  font-size: 11px !important; font-weight: 700 !important;
+  letter-spacing: 0.5px !important; text-transform: uppercase !important;
+}
+body .subscription-card__footer {
+  display: flex !important; justify-content: space-between !important;
+  align-items: center !important; flex-wrap: wrap !important; gap: 16px !important;
+  background: transparent !important; padding: 0 !important; border: none !important;
 }
 
-/* Recria ícones internos dos botões secundários para usarem a cor principal */
-body .content-box__control-btn svg path {
-  fill: var(--md-sys-color-on-background) !important;
+/* =======================================================
+   5. LIGAÇÕES (STEAM, XBOX, WOT, YOUTUBE)
+   ======================================================= */
+body .sync-platform, body .connect-account__card {
+  display: flex !important; flex-direction: column !important; gap: 16px !important;
+}
+body .sync-platform__body, body .content-box__flex-line {
+  display: flex !important; justify-content: space-between !important;
+  align-items: center !important; flex-wrap: wrap !important; gap: 16px !important;
+}
+body .sync-platform__left-side {
+  display: flex !important; align-items: center !important; gap: 12px !important;
 }
 
-/* 7. ALINHAMENTOS RESPONSIVOS PARA LINHAS DE CONTEÚDO */
-body .content-box__flex-line,
-body .content-box__head,
-body .sync-platform__body {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 16px !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-}
-
-body hr {
-  border-color: var(--md-sys-color-surface-variant) !important;
-  margin: 20px 0 !important;
-}
-
-/* Caixa de Aviso (Warning Card - Ex: Mudança de Região) */
-body .warning {
-  background: rgba(245, 200, 0, 0.1) !important;
-  border: 1px solid rgba(245, 200, 0, 0.3) !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
+/* Formatação dos Botões de Ação Secundários (Ressincronizar, Ligar) */
+body .sync-platform__button, body .content-box__control-btn, 
+body .subscription-card__info-button, body .hotkey-setting__reset-btn {
+  background: var(--md-sys-color-surface-variant) !important;
   color: var(--md-sys-color-on-background) !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  margin-top: 16px !important;
+  border-radius: 100px !important; padding: 8px 16px !important;
+  font-weight: 600 !important; font-size: 12px !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  gap: 8px !important; border: none !important; box-shadow: none !important;
+  height: auto !important; margin: 0 !important;
 }
-body .warning p { margin: 0 !important; font-size: 13px !important; }
+body .sync-platform__buttons { display: flex !important; gap: 8px !important; flex-wrap: wrap !important; }
+
+/* Reestiliza texto e SVGs dentro dos botões (Cor padrão) */
+body .sync-platform__button p, body .content-box__control-btn span {
+  color: var(--md-sys-color-on-background) !important; margin: 0 !important;
+}
+body .content-box__control-btn svg path { fill: var(--md-sys-color-on-background) !important; }
+body .sync-platform__button img { filter: brightness(0) invert(1) !important; opacity: 0.8 !important; } /* Força o ícone a ficar branco/claro */
+
+/* Cor Crítica para botões de "Desligar" ou "Remover" */
+body .sync-platform__button:first-child p,
+body .content-box__controls--pb .content-box__control-btn span { color: #ffb4ab !important; }
+body .sync-platform__button:first-child img { filter: invert(75%) sepia(21%) saturate(1476%) hue-rotate(309deg) brightness(101%) contrast(105%) !important; } /* Filtro CSS para cor erro */
+body .content-box__controls--pb .content-box__control-btn svg path { fill: #ffb4ab !important; }
+
+/* Status da Sincronização e Data (Fundo limpo e alinhado) */
+body .sync-platform__top {
+  display: flex !important; flex-direction: column !important; gap: 4px !important;
+  padding-top: 12px !important; border-top: 1px solid var(--md-sys-color-surface-variant) !important;
+}
+
+/* =======================================================
+   6. CONVÍVIO (DISCORD E TELEGRAM)
+   ======================================================= */
+body .account-discord {
+  display: flex !important; justify-content: space-between !important;
+  align-items: center !important; text-decoration: none !important;
+  padding: 16px 20px !important;
+}
+body .account-discord:hover { background: var(--md-sys-color-surface-container-high) !important; }
+body .account-discord__inner {
+  display: flex !important; justify-content: space-between !important;
+  align-items: center !important; width: 100% !important; gap: 16px !important;
+}
+body .account-discord__inner h3 {
+  color: var(--md-sys-color-on-background) !important; font-weight: 600 !important; font-size: 14px !important; margin: 0 !important;
+}
+
+/* =======================================================
+   7. DETALHES DE LAYOUT E FORMS (AVATAR E DROPDOWN)
+   ======================================================= */
+/* Selects de Região (Dropdown) */
+body .select__main.select__main {
+  background: var(--md-sys-color-surface-variant) !important; border-radius: 100px !important;
+  padding: 10px 16px !important; color: var(--md-sys-color-on-background) !important;
+}
+
+body hr { border-color: var(--md-sys-color-surface-variant) !important; margin: 20px 0 !important; }
+
+/* Aviso de Região (Warning Box) */
+body .warning {
+  background: rgba(245, 200, 0, 0.1) !important; border: 1px solid rgba(245, 200, 0, 0.2) !important;
+  border-radius: 16px !important; padding: 16px !important; margin-top: 16px !important;
+  display: flex !important; align-items: flex-start !important; gap: 12px !important;
+}
+body .warning p { margin: 0 !important; font-size: 13px !important; color: var(--md-sys-color-on-background) !important; }
 body .warning svg path { fill: var(--md-sys-color-primary) !important; }
 
-/* 8. AJUSTES ESPECÍFICOS DO CABEÇALHO DO USUÁRIO (AVATAR) */
+/* Ajusta o Avatar e Informações da Conta para o Mobile */
 @media (max-width: 600px) {
-  body .user-info .content-box__card {
-    flex-direction: column !important;
-    text-align: center !important;
-    align-items: center !important;
-  }
-  body .user-info__profile-data {
-    align-items: center !important;
-    margin-top: 16px !important;
-  }
-  body .profile-data__socials-item {
-    justify-content: center !important;
-  }
-  body .profile-data__other-item {
-    justify-content: center !important;
-  }
-  body .user-info__profile-img {
-    margin-right: 0 !important;
-  }
+  body .user-info .content-box__card { flex-direction: column !important; align-items: center !important; text-align: center !important; }
+  body .user-info__profile-img { margin-right: 0 !important; margin-bottom: 16px !important; }
+  body .user-info__profile-data { align-items: center !important; width: 100% !important; }
+  body .profile-data__socials-item, body .profile-data__other-item { justify-content: center !important; }
+  body .content-box__head-controls { width: 100% !important; justify-content: center !important; }
+  body .sync-platform__body { flex-direction: column !important; align-items: flex-start !important; }
+  body .sync-platform__buttons { width: 100% !important; }
+  body .sync-platform__button { flex: 1 !important; } /* Botões ocupam 50% cada em telas muito pequenas */
 }
