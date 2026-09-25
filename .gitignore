@@ -1,3 +1,33 @@
-build/
-*.apk
+# ==========================================
+# Boosteroid CloudPad - Git Ignore Rules
+# ==========================================
+
+# Diretórios de Build e Saída (Gerados pelos scripts)
+/build/
+/dist/
+
+# Bundles de Assets Gerados Dinamicamente
+/assets/gamepad.js
+/assets/theme.css
+
+# Arquivos Temporários, Logs e Diffs
+*.diff
+*.log
+projeto_completo.txt
+profile.html
+*.jpg
+*.png
+*.jpeg
+
+# Segurança (Chaves de Assinatura, caso movidas para a raiz)
 *.keystore
+*.jks
+
+# Resultados apk
+*.apk
+
+# IDEs e Sistema Operacional (Caso o projeto seja aberto em PC)
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
