@@ -80,11 +80,10 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         
         // 🚀 O BYPASS DEFINITIVO DE CAPTCHA E GOOGLE LOGIN 🚀
-        // Pegamos a identidade real do seu celular para não irritar o reCAPTCHA...
         String defaultUA = settings.getUserAgentString();
-        // Removemos "Mobile" para o Boosteroid entregar a versão PC
-        // Removemos " wv" para o Google OAuth liberar o login achando que é o Chrome Mobile
-        String safeUA = defaultUA.replace("Mobile", "").replace("; wv", "");
+        // Removemos APENAS " wv" para o Google OAuth liberar o login.
+        // MANTEMOS "Mobile" para que o Boosteroid reconheça como smartphone e libere o touch na stream!
+        String safeUA = defaultUA.replace("; wv", "");
         settings.setUserAgentString(safeUA);
 
         webView.setWebChromeClient(new WebChromeClient() {

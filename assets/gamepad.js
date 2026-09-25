@@ -33,7 +33,6 @@
     }
   }
 
-  // 🔴 Alterado para iniciar desabilitado por padrão
   let isGamepadEnabled = false;
   let isEditMode = false;
 
@@ -49,10 +48,31 @@
     SELECT: 8, START: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, HOME: 16
   };
 
+  // 🚀 CORREÇÃO: Salva a função nativa para não "cegar" o navegador para controles físicos
+  const nativeGetGamepads = navigator.getGamepads ? navigator.getGamepads.bind(navigator) : () => [];
+
   navigator.getGamepads = function () {
-    if (!isGamepadEnabled) return [null, null, null, null];
-    virtualGamepad.timestamp = performance.now();
-    return [virtualGamepad, null, null, null];
+    const physicalPads = nativeGetGamepads() || [];
+    const result = [null, null, null, null];
+    
+    // 1. Mantém os controles físicos reais intocados nos seus respectivos slots
+    for (let i = 0; i < 4; i++) {
+      if (physicalPads[i]) {
+        result[i] = physicalPads[i];
+      }
+    }
+
+    // 2. Injeta o controle virtual apenas no primeiro slot vazio disponível
+    if (isGamepadEnabled) {
+      virtualGamepad.timestamp = performance.now();
+      let emptySlot = result.findIndex(p => p === null);
+      if (emptySlot !== -1) {
+        virtualGamepad.index = emptySlot;
+        result[emptySlot] = virtualGamepad;
+      }
+    }
+    
+    return result;
   };
 
   function notifyConnected() {

@@ -1,0 +1,2037 @@
+
+
+=======================================================
+FICHEIRO: AndroidManifest.xml
+=======================================================
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.cloudpad.boosteroid"
+    android:versionCode="4"
+    android:versionName="4.0">
+
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <application
+        android:label="Boosteroid Pad"
+        android:hardwareAccelerated="true"
+        android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
+        
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="Boosteroid Pad"
+            android:screenOrientation="fullSensor"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+
+
+=======================================================
+FICHEIRO: build.sh
+=======================================================
+#!/bin/bash
+# Build an Android APK entirely from Termux
+# Run setup.sh first to install dependencies
+set -e
+
+PROJECT="$(cd "$(dirname "$0")" && pwd)"
+ANDROID_JAR="$HOME/android-sdk/android.jar"
+BUILD="$PROJECT/build"
+GEN="$BUILD/gen"
+OBJ="$BUILD/obj"
+APK_DIR="$BUILD/apk"
+COMPILED_RES="$BUILD/compiled_res"
+APK_NAME="boosteroid-pad"
+
+if [ ! -f "$ANDROID_JAR" ]; then
+    echo "ERROR: android.jar not found at $ANDROID_JAR"
+    echo "Run setup.sh first to download it."
+    exit 1
+fi
+
+echo "=== Cleaning build artifacts ==="
+rm -rf "$GEN" "$OBJ" "$APK_DIR" "$COMPILED_RES" "$BUILD/classes.dex"
+mkdir -p "$GEN" "$OBJ" "$APK_DIR" "$COMPILED_RES"
+
+echo "=== Step 0: Bundle JS Modules & CSS Themes ==="
+cat assets/gamepad/00_header.js \
+    assets/gamepad/01_core.js \
+    assets/gamepad/02_layout.js \
+    assets/gamepad/03_ui.js \
+    assets/gamepad/04_edit.js \
+    assets/gamepad/05_input.js \
+    assets/gamepad/06_init.js \
+    assets/gamepad/99_footer.js > assets/gamepad.js
+
+cat assets/theme/*.css > assets/theme.css
+
+
+echo "=== Step 1: Compile resources ==="
+aapt2 compile --dir "$PROJECT/res" -o "$COMPILED_RES/"
+
+echo "=== Step 2: Link resources ==="
+aapt2 link \
+    -I "$ANDROID_JAR" \
+    --manifest "$PROJECT/AndroidManifest.xml" \
+    -A assets \
+    --java "$GEN" \
+    -o "$APK_DIR/${APK_NAME}-unaligned.apk" \
+    "$COMPILED_RES"/*.flat
+
+echo "=== Step 3: Compile Java ==="
+javac \
+    -source 1.8 -target 1.8 \
+    -classpath "$ANDROID_JAR" \
+    -d "$OBJ" \
+    "$GEN/com/cloudpad/boosteroid/R.java" \
+    "$PROJECT/src/com/cloudpad/boosteroid/MainActivity.java"
+
+echo "=== Step 4: DEX ==="
+dx --dex --output="$BUILD/classes.dex" "$OBJ"
+
+echo "=== Step 5: Package APK ==="
+cp "$APK_DIR/${APK_NAME}-unaligned.apk" "$APK_DIR/${APK_NAME}.apk"
+cd "$BUILD" && zip -j "$APK_DIR/${APK_NAME}.apk" classes.dex
+cd "$PROJECT"
+
+echo "=== Step 6: Sign ==="
+if [ ! -f "$HOME/.debug.keystore" ]; then
+    keytool -genkeypair \
+        -keystore "$HOME/.debug.keystore" \
+        -alias debug \
+        -keyalg RSA -keysize 2048 \
+        -validity 10000 \
+        -storepass android \
+        -keypass android \
+        -dname "CN=Debug, OU=Debug, O=Debug, L=Debug, ST=Debug, C=US"
+fi
+
+apksigner sign \
+    --ks "$HOME/.debug.keystore" \
+    --ks-key-alias debug \
+    --ks-pass pass:android \
+    --key-pass pass:android \
+    "$APK_DIR/${APK_NAME}.apk"
+
+echo ""
+echo "=== BUILD SUCCESSFUL ==="
+ls -lh "$APK_DIR/${APK_NAME}.apk"
+echo ""
+echo "To install:"
+echo "  cp $APK_DIR/${APK_NAME}.apk ~/storage/shared/ && termux-open ~/storage/shared/${APK_NAME}.apk"
+
+
+=======================================================
+FICHEIRO: build_userscript.sh
+=======================================================
+#!/bin/bash
+# Script para empacotar o projeto como um Userscript (Tampermonkey/Violentmonkey)
+
+echo "=== Preparando o ambiente do Userscript ==="
+mkdir -p dist
+
+# Concatena a pasta de temas em um arquivo provisório
+cat assets/theme/*.css > assets/theme.css
+
+# 1. Converte o CSS nativo para Base64 (sem quebras de linha)
+CSS_BASE64=$(base64 assets/theme.css | tr -d '\n')
+
+# 2. Cria dinamicamente um módulo injetor de CSS exclusivo para o Tampermonkey
+# Ele faz uma checagem de segurança (!window.AndroidClipboard) para ter 100% de certeza
+# de que não vai rodar se por acaso for parar dentro do app Android.
+cat <<EOF > assets/gamepad/07_tampermonkey_theme.js
+  // --- TAMPERMONKEY SPECIFIC: Injeção do Tema MD3 ---
+  if (!window.AndroidClipboard) {
+    const injectTheme = () => {
+      if(document.getElementById('injected-md3-theme')) return;
+      const style = document.createElement('style');
+      style.id = 'injected-md3-theme';
+      style.innerHTML = window.atob('${CSS_BASE64}');
+      document.head.appendChild(style);
+    };
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', injectTheme); } 
+    else { injectTheme(); }
+  }
+EOF
+
+echo "=== Empacotando módulos JS ==="
+# 3. Junta todos os módulos em um arquivo de distribuição (.user.js)
+cat assets/gamepad/00_header.js \
+    assets/gamepad/01_core.js \
+    assets/gamepad/02_layout.js \
+    assets/gamepad/03_ui.js \
+    assets/gamepad/04_edit.js \
+    assets/gamepad/05_input.js \
+    assets/gamepad/06_init.js \
+    assets/gamepad/07_tampermonkey_theme.js \
+    assets/gamepad/99_footer.js > dist/boosteroid-cloudpad.user.js
+
+# 4. Limpa o módulo temporário
+rm assets/gamepad/07_tampermonkey_theme.js
+
+echo "=== SUCESSO ==="
+echo "Userscript gerado em: dist/boosteroid-cloudpad.user.js"
+echo "Você pode copiar o conteúdo desse arquivo e colar direto no Tampermonkey!"
+
+
+=======================================================
+FICHEIRO: src/com/cloudpad/boosteroid/MainActivity.java
+=======================================================
+package com.cloudpad.boosteroid;
+
+import android.Manifest;
+import android.app.Activity;
+import android.content.pm.PackageManager;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+import android.content.Context;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.Base64;
+import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+
+public class MainActivity extends Activity {
+    private WebView webView;
+    private PermissionRequest pendingAudioRequest;
+    private static final int AUDIO_PERMISSION_CODE = 101;
+
+    public class ClipboardJSInterface {
+        Context mContext;
+        ClipboardJSInterface(Context c) { mContext = c; }
+
+        @JavascriptInterface
+        public String getClipboardText() {
+            ClipboardManager clipboard = (ClipboardManager) mContext.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence text = clip.getItemAt(0).getText();
+                    return text != null ? text.toString() : "";
+                }
+            }
+            return "";
+        }
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        }
+
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            | View.SYSTEM_UI_FLAG_FULLSCREEN
+            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        );
+
+        webView = new WebView(this);
+        setContentView(webView);
+
+        webView.addJavascriptInterface(new ClipboardJSInterface(this), "AndroidClipboard");
+
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+        
+        // 🚀 O BYPASS DEFINITIVO DE CAPTCHA E GOOGLE LOGIN 🚀
+        // Pegamos a identidade real do seu celular para não irritar o reCAPTCHA...
+        String defaultUA = settings.getUserAgentString();
+        // Removemos "Mobile" para o Boosteroid entregar a versão PC
+        // Removemos " wv" para o Google OAuth liberar o login achando que é o Chrome Mobile
+        String safeUA = defaultUA.replace("Mobile", "").replace("; wv", "");
+        settings.setUserAgentString(safeUA);
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                boolean isAudioRequest = false;
+                for (String resource : request.getResources()) {
+                    if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
+                        isAudioRequest = true;
+                        break;
+                    }
+                }
+
+                if (isAudioRequest) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                            pendingAudioRequest = request;
+                            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, AUDIO_PERMISSION_CODE);
+                        } else {
+                            request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                        }
+                    } else {
+                        request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                    }
+                } else {
+                    request.deny();
+                }
+            }
+        });
+
+        final String cssCode = readAsset("theme.css");
+        final String jsCode = readAsset("gamepad.js");
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+
+                if (url != null && url.contains("cloud.boosteroid.com")) {
+                    if (!cssCode.isEmpty()) {
+                        String encodedCss = Base64.encodeToString(cssCode.getBytes(), Base64.NO_WRAP);
+                        String injectCssJs = "(function() {" +
+                                             "if(document.getElementById('injected-md3-theme')) return;" +
+                                             "var style = document.createElement('style');" +
+                                             "style.id = 'injected-md3-theme';" +
+                                             "style.innerHTML = window.atob('" + encodedCss + "');" +
+                                             "document.head.appendChild(style);" +
+                                             "})();";
+                        view.evaluateJavascript(injectCssJs, null);
+                    }
+
+                    if (!jsCode.isEmpty()) {
+                        view.evaluateJavascript("(function(){ " + jsCode + " })();", null);
+                    }
+                }
+            }
+        });
+
+        webView.loadUrl("https://cloud.boosteroid.com");
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == AUDIO_PERMISSION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (pendingAudioRequest != null) {
+                    pendingAudioRequest.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                    pendingAudioRequest = null;
+                }
+            } else {
+                if (pendingAudioRequest != null) {
+                    pendingAudioRequest.deny();
+                    pendingAudioRequest = null;
+                }
+            }
+        }
+    }
+
+    private String readAsset(String filename) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            InputStream is = getAssets().open(filename);
+            BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            br.close();
+            is.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+}
+
+
+=======================================================
+FICHEIRO: assets/gamepad/00_header.js
+=======================================================
+// ==UserScript==
+// @name         Boosteroid CloudPad
+// @namespace    https://github.com/SEU_USUARIO/boosteroid-cloudpad
+// @version      8.0
+// @description  Controle Virtual XInput, HUD editável, Tema MD3 e Otimizações para o Boosteroid.
+// @author       Seu Nome / Comunidade
+// @match        ://cloud.boosteroid.com/
+// @icon         https://cloud.boosteroid.com/favicon.ico
+// @run-at       document-start
+// @grant        none
+// ==/UserScript==
+
+(function () {
+  'use strict';
+
+  if (window.self !== window.top && !document.querySelector('canvas, video')) return;
+
+  function silenceEvent(e) {
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+  }
+
+
+=======================================================
+FICHEIRO: assets/gamepad/01_core.js
+=======================================================
+  // --- CORE: Estado do Gamepad e Interceptação Segura ---
+
+  // 🚀 INTERCEPTAÇÃO DA ÁREA DE TRANSFERÊNCIA (CLIPBOARD) 🚀
+  if (window.AndroidClipboard) {
+    try {
+      const nativeClipboard = {
+        readText: async () => window.AndroidClipboard.getClipboardText(),
+        writeText: async () => {} 
+      };
+      Object.defineProperty(navigator, 'clipboard', { value: nativeClipboard, configurable: true });
+    } catch(e) {
+      if (navigator.clipboard) navigator.clipboard.readText = async () => window.AndroidClipboard.getClipboardText();
+    }
+  }
+
+  // 🔴 Alterado para iniciar desabilitado por padrão
+  let isGamepadEnabled = false;
+  let isEditMode = false;
+
+  const virtualGamepad = {
+    id: "Xbox 360 Controller (XInput STANDARD GAMEPAD)",
+    index: 0, connected: true, timestamp: performance.now(), mapping: "standard",
+    axes: [0.0, 0.0, 0.0, 0.0],
+    buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0.0 }))
+  };
+
+  const GP = {
+    A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7,
+    SELECT: 8, START: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, HOME: 16
+  };
+
+  navigator.getGamepads = function () {
+    if (!isGamepadEnabled) return [null, null, null, null];
+    virtualGamepad.timestamp = performance.now();
+    return [virtualGamepad, null, null, null];
+  };
+
+  function notifyConnected() {
+    virtualGamepad.connected = true;
+    try { window.dispatchEvent(new GamepadEvent('gamepadconnected', { gamepad: virtualGamepad })); } 
+    catch (e) { let ev = new Event('gamepadconnected'); ev.gamepad = virtualGamepad; window.dispatchEvent(ev); }
+  }
+
+  function notifyDisconnected() {
+    virtualGamepad.connected = false;
+    try { window.dispatchEvent(new GamepadEvent('gamepaddisconnected', { gamepad: virtualGamepad })); } 
+    catch (e) { let ev = new Event('gamepaddisconnected'); ev.gamepad = virtualGamepad; window.dispatchEvent(ev); }
+  }
+
+  function resetInputs() {
+    virtualGamepad.axes = [0.0, 0.0, 0.0, 0.0];
+    virtualGamepad.buttons.forEach(b => { b.pressed = false; b.value = 0.0; });
+  }
+
+
+=======================================================
+FICHEIRO: assets/gamepad/02_layout.js
+=======================================================
+  // --- LAYOUT E CONFIGURAÇÕES: Posições e Comportamentos ---
+  let homeIsSteam = true; // Estado global para o comportamento do botão HOME
+
+  const defaultLayout = {
+    'vpad-el-lt': { left: '4vw', top: '8vh', scale: 1 },
+    'vpad-el-lb': { left: '16vw', top: '8vh', scale: 1 },
+    'vpad-el-rt': { left: '86vw', top: '8vh', scale: 1 },
+    'vpad-el-rb': { left: '74vw', top: '8vh', scale: 1 },
+    'vpad-el-menus': { left: '40vw', top: '8vh', scale: 1 },
+    'vpad-el-dpad': { left: '6vw', top: '50vh', scale: 1 },
+    'vpad-el-abxy': { left: '78vw', top: '50vh', scale: 1 },
+    'vpad-el-l3': { left: '22vw', top: '78vh', scale: 1 },
+    'vpad-el-r3': { left: '65vw', top: '78vh', scale: 1 },
+    'vpad-el-touch-l': { left: '3vw', top: '45vh', scale: 1 },
+    'vpad-el-touch-r': { left: '62vw', top: '45vh', scale: 1 }
+  };
+
+  function saveLayout() {
+    const layout = {};
+    document.querySelectorAll('.vpad-element').forEach(el => {
+      layout[el.id] = {
+        left: el.style.left, top: el.style.top,
+        scale: el.style.getPropertyValue('--scale') || 1,
+        opacity: el.style.getPropertyValue('--opacity') || 1,
+        blur: el.style.getPropertyValue('--blur-val') || '4px'
+      };
+    });
+    localStorage.setItem('vpad-layout-v1', JSON.stringify(layout));
+    localStorage.setItem('vpad-config-v1', JSON.stringify({ homeIsSteam }));
+  }
+
+  function loadLayout() {
+    let saved = null; let savedConfig = null;
+    try { saved = JSON.parse(localStorage.getItem('vpad-layout-v1')); } catch (e) {}
+    try { savedConfig = JSON.parse(localStorage.getItem('vpad-config-v1')); } catch (e) {}
+    
+    const layout = saved || defaultLayout;
+    if (savedConfig && savedConfig.homeIsSteam !== undefined) homeIsSteam = savedConfig.homeIsSteam;
+    
+    for (let id in layout) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.left = layout[id].left; el.style.top = layout[id].top;
+        el.style.setProperty('--scale', layout[id].scale !== undefined ? layout[id].scale : 1);
+        el.style.setProperty('--opacity', layout[id].opacity !== undefined ? layout[id].opacity : 1);
+        el.style.setProperty('--blur-val', layout[id].blur !== undefined ? layout[id].blur : '4px');
+      }
+    }
+  }
+
+  function resetLayout() {
+    localStorage.removeItem('vpad-layout-v1');
+    loadLayout();
+  }
+
+
+=======================================================
+FICHEIRO: assets/gamepad/03_ui.js
+=======================================================
+  // --- UI: Ícones, Estilos e Construção do DOM ---
+  const ICON = {
+    pad: `<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="6"/><circle cx="6" cy="12" r="1"/><circle cx="18" cy="12" r="1"/><path d="M10 12h.01M14 12h.01"/></svg>`,
+    screen: `<svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`,
+    edit: `<svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`,
+    plus: `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+    minus: `<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+    reset: `<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>`,
+    eye: `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    eyeOff: `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
+    drop: `<svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
+    keyboard: `<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="6" y1="9" x2="6" y2="9"/><line x1="10" y1="9" x2="10" y2="9"/><line x1="14" y1="9" x2="14" y2="9"/><line x1="18" y1="9" x2="18" y2="9"/><line x1="6" y1="13" x2="6" y2="13"/><line x1="10" y1="13" x2="10" y2="13"/><line x1="14" y1="13" x2="14" y2="13"/><line x1="18" y1="13" x2="18" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`,
+    up: `<svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>`,
+    down: `<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`,
+    left: `<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>`,
+    right: `<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>`,
+    menu: `<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
+    view: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>`,
+    home: `<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
+    back: `<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`,
+    clipboard: `<svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`,
+    mic: `<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`,
+    micOff: `<svg viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`,
+    keyboardTop: `<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="10" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="14" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>`,
+    power: `<svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>`
+  };
+
+  function renderUI() {
+    if (document.getElementById('vpad-root')) return;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      #vpad-root { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; user-select: none; -webkit-user-select: none; touch-action: none; overflow: hidden; font-family: system-ui, sans-serif; }
+      
+      .vpad-glass-btn { display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.35); color: #fff; font-weight: 700; backdrop-filter: blur(var(--blur-val, 4px)); transition: background 0.1s, border-color 0.2s, color 0.2s; pointer-events: auto; touch-action: none; }
+      .vpad-glass-btn:active, .vpad-glass-btn.active-press { background: rgba(255, 255, 255, 0.45); }
+      .vpad-glass-btn svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: inherit; }
+      
+      #vpad-top-bar { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; flex-wrap: wrap; justify-content: center; width: max-content; max-width: 95vw; }
+      .vpad-top-btn { padding: 6px 12px; font-size: 10px; border-radius: 24px; white-space: nowrap; }
+      .vpad-top-btn svg { width: 14px; height: 14px; }
+      .vpad-top-btn.is-off { border-color: rgba(255,100,100,0.6); color: #ffbaba; background: rgba(80,0,0,0.4); }
+      .vpad-top-btn.is-edit { border-color: #ffeb3b; color: #ffeb3b; }
+      .vpad-top-btn.is-danger { border-color: #ff6b6b; color: #ff6b6b; }
+      
+      #vpad-edit-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.85); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 0; display: none; flex-direction: column; pointer-events: auto; backdrop-filter: blur(8px); z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+      #vpad-edit-panel.visible { display: flex; }
+      #vpad-edit-header { background: rgba(255, 255, 255, 0.1); padding: 10px; text-align: center; font-size: 10px; font-weight: bold; color: #aaa; text-transform: uppercase; border-radius: 16px 16px 0 0; cursor: move; touch-action: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+      
+      .vpad-edit-body { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px; }
+      .vpad-edit-btn { padding: 10px 8px; border-radius: 12px; font-size: 9px; flex-direction: column; gap: 4px; text-align: center; }
+      .vpad-edit-btn svg { width: 16px; height: 16px; }
+      .vpad-edit-btn.wide { grid-column: 1 / -1; flex-direction: row; font-size: 11px; padding: 10px; }
+      
+      .vpad-hidden { display: none !important; }
+      .vpad-element { position: absolute; opacity: var(--opacity, 1); transform: scale(var(--scale, 1)); transform-origin: center center; pointer-events: auto; touch-action: none; }
+      .vpad-element.edit-mode-active { border: 2px dashed rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05); border-radius: 12px; }
+      .vpad-element.edit-mode-active.selected { border-color: #ffeb3b; background: rgba(255, 235, 59, 0.2); z-index: 1000; }
+      
+      .vpad-btn-round { width: 50px; height: 50px; border-radius: 50%; font-size: 16px; letter-spacing: 1px; }
+      .vpad-btn-round svg { width: 22px; height: 22px; }
+      .vpad-btn-rect { width: 75px; height: 45px; border-radius: 10px; font-size: 14px; }
+      .vpad-btn-small { width: 45px; height: 35px; border-radius: 20px; font-size: 11px; }
+      .vpad-btn-small svg { width: 14px; height: 14px; }
+      
+      #vpad-el-menus { display: flex; gap: 12px; }
+      .vpad-cluster-grid { position: relative; width: 140px; height: 140px; }
+      .vpad-cluster-grid .btn-top { position: absolute; top: 0; left: 45px; }
+      .vpad-cluster-grid .btn-bottom { position: absolute; bottom: 0; left: 45px; }
+      .vpad-cluster-grid .btn-left { position: absolute; top: 45px; left: 0; }
+      .vpad-cluster-grid .btn-right { position: absolute; top: 45px; right: 0; }
+      
+      .vpad-touch-zone { width: 35vw; height: 50vh; }
+      .vpad-stick-base { position: absolute; width: 110px; height: 110px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.25); pointer-events: none; backdrop-filter: blur(var(--blur-val, 0px)); transition: opacity 0.2s; }
+      .vpad-stick-knob { position: absolute; width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.5); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+    `;
+    document.head.appendChild(style);
+
+    const root = document.createElement('div');
+    root.id = 'vpad-root';
+    root.innerHTML = `
+      <div id="vpad-top-bar">
+        <div id="vpad-exit-btn" class="vpad-glass-btn vpad-top-btn is-danger">${ICON.power} SAIR</div>
+        <div id="vpad-clipboard-btn" class="vpad-glass-btn vpad-top-btn">${ICON.clipboard} COLAR</div>
+        <div id="vpad-mic-btn" class="vpad-glass-btn vpad-top-btn">${ICON.micOff} MIC OFF</div>
+        <div id="vpad-kb-btn" class="vpad-glass-btn vpad-top-btn">${ICON.keyboardTop} TECLADO</div>
+        <div id="vpad-toggle-btn" class="vpad-glass-btn vpad-top-btn">${ICON.pad} ON</div>
+        <div id="vpad-fullscreen-btn" class="vpad-glass-btn vpad-top-btn">${ICON.screen} ECRÃ</div>
+        <div id="vpad-edit-toggle-btn" class="vpad-glass-btn vpad-top-btn">${ICON.edit} EDITAR</div>
+      </div>
+      
+      <div id="vpad-edit-panel">
+        <div id="vpad-edit-header">≡ ARRASTAR PAINEL</div>
+        <div class="vpad-edit-body">
+          <div id="vpad-edit-minus" class="vpad-glass-btn vpad-edit-btn">${ICON.minus} TAM -</div>
+          <div id="vpad-edit-plus" class="vpad-glass-btn vpad-edit-btn">${ICON.plus} TAM +</div>
+          <div id="vpad-edit-reset" class="vpad-glass-btn vpad-edit-btn">${ICON.reset} REPOR</div>
+          <div id="vpad-edit-op-minus" class="vpad-glass-btn vpad-edit-btn">${ICON.eyeOff} OPAC -</div>
+          <div id="vpad-edit-op-plus" class="vpad-glass-btn vpad-edit-btn">${ICON.eye} OPAC +</div>
+          <div id="vpad-edit-blur" class="vpad-glass-btn vpad-edit-btn">${ICON.drop} BLUR ON</div>
+          <div id="vpad-edit-home-mode" class="vpad-glass-btn vpad-edit-btn wide"></div>
+        </div>
+      </div>
+      
+      <div id="vpad-controls-container">
+        <div class="vpad-element vpad-touch-zone" id="vpad-el-touch-l"><div id="vpad-stick-base-l" class="vpad-stick-base"><div id="vpad-stick-knob-l" class="vpad-stick-knob"></div></div></div>
+        <div class="vpad-element vpad-touch-zone" id="vpad-el-touch-r"><div id="vpad-stick-base-r" class="vpad-stick-base"><div id="vpad-stick-knob-r" class="vpad-stick-knob"></div></div></div>
+        <div class="vpad-element" id="vpad-el-lt"><div class="vpad-glass-btn vpad-btn-rect" id="vpad-btn-lt">LT</div></div>
+        <div class="vpad-element" id="vpad-el-lb"><div class="vpad-glass-btn vpad-btn-rect" id="vpad-btn-lb">LB</div></div>
+        <div class="vpad-element" id="vpad-el-rt"><div class="vpad-glass-btn vpad-btn-rect" id="vpad-btn-rt">RT</div></div>
+        <div class="vpad-element" id="vpad-el-rb"><div class="vpad-glass-btn vpad-btn-rect" id="vpad-btn-rb">RB</div></div>
+        <div class="vpad-element" id="vpad-el-menus">
+          <div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-select">${ICON.view}</div>
+          <div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-home">${ICON.home}</div>
+          <div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-start">${ICON.menu}</div>
+        </div>
+        <div class="vpad-element vpad-cluster-grid" id="vpad-el-dpad">
+          <div class="vpad-glass-btn vpad-btn-round btn-top" id="vpad-btn-up">${ICON.up}</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-bottom" id="vpad-btn-down">${ICON.down}</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-left" id="vpad-btn-left">${ICON.left}</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-right" id="vpad-btn-right">${ICON.right}</div>
+        </div>
+        <div class="vpad-element" id="vpad-el-l3"><div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-l3">L3</div></div>
+        <div class="vpad-element vpad-cluster-grid" id="vpad-el-abxy">
+          <div class="vpad-glass-btn vpad-btn-round btn-top" id="vpad-btn-y">Y</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-bottom" id="vpad-btn-a">A</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-left" id="vpad-btn-x">X</div>
+          <div class="vpad-glass-btn vpad-btn-round btn-right" id="vpad-btn-b">B</div>
+        </div>
+        <div class="vpad-element" id="vpad-el-r3"><div class="vpad-glass-btn vpad-btn-small" id="vpad-btn-r3">R3</div></div>
+      </div>
+    `;
+    document.body.appendChild(root);
+    loadLayout();
+  }
+
+
+=======================================================
+FICHEIRO: assets/gamepad/04_edit.js
+=======================================================
+  // --- EDIT MODE: Drag & Drop, Redimensionamento, Opacidade, Blur e Modo Home ---
+  let activeEditElement = null;
+  let dragData = null;
+  let panelDrag = null;
+
+  function initEditLogic() {
+    const editToggleBtn = document.getElementById('vpad-edit-toggle-btn');
+    const editPanel = document.getElementById('vpad-edit-panel');
+    const homeModeBtn = document.getElementById('vpad-edit-home-mode');
+
+    homeModeBtn.innerHTML = homeIsSteam ? `${ICON.keyboard} HOME: SHIFT+TAB` : `${ICON.pad} HOME: NATIVO`;
+    
+    function updatePanelState() {
+      if (!activeEditElement) return;
+      let currentBlur = activeEditElement.style.getPropertyValue('--blur-val');
+      let isBlurOn = currentBlur === '' || currentBlur === '4px';
+      if (currentBlur === '0px') isBlurOn = false;
+      document.getElementById('vpad-edit-blur').innerHTML = isBlurOn ? `${ICON.drop} BLUR ON` : `${ICON.drop} BLUR OFF`;
+    }
+
+    editToggleBtn.addEventListener('click', (e) => {
+      silenceEvent(e);
+      isEditMode = !isEditMode;
+      const elements = document.querySelectorAll('.vpad-element');
+      
+      if (isEditMode) {
+        editToggleBtn.classList.add('is-edit'); editPanel.classList.add('visible');
+        resetInputs();
+        elements.forEach(el => el.classList.add('edit-mode-active'));
+      } else {
+        editToggleBtn.classList.remove('is-edit'); editPanel.classList.remove('visible');
+        if (activeEditElement) activeEditElement.classList.remove('selected');
+        activeEditElement = null;
+        elements.forEach(el => el.classList.remove('edit-mode-active'));
+        saveLayout();
+      }
+    }, { capture: true });
+
+    homeModeBtn.addEventListener('click', (e) => {
+      silenceEvent(e);
+      homeIsSteam = !homeIsSteam;
+      homeModeBtn.innerHTML = homeIsSteam ? `${ICON.keyboard} HOME: SHIFT+TAB` : `${ICON.pad} HOME: NATIVO`;
+      saveLayout();
+    });
+
+    document.getElementById('vpad-edit-plus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let s = parseFloat(activeEditElement.style.getPropertyValue('--scale')) || 1; activeEditElement.style.setProperty('--scale', Math.min(2.5, s + 0.1)); }});
+    document.getElementById('vpad-edit-minus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let s = parseFloat(activeEditElement.style.getPropertyValue('--scale')) || 1; activeEditElement.style.setProperty('--scale', Math.max(0.4, s - 0.1)); }});
+    document.getElementById('vpad-edit-op-plus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let o = parseFloat(activeEditElement.style.getPropertyValue('--opacity')); if (isNaN(o)) o = 1; activeEditElement.style.setProperty('--opacity', Math.min(1.0, o + 0.1).toFixed(1)); }});
+    document.getElementById('vpad-edit-op-minus').addEventListener('click', (e) => { silenceEvent(e); if (activeEditElement) { let o = parseFloat(activeEditElement.style.getPropertyValue('--opacity')); if (isNaN(o)) o = 1; activeEditElement.style.setProperty('--opacity', Math.max(0.1, o - 0.1).toFixed(1)); }});
+
+    document.getElementById('vpad-edit-blur').addEventListener('click', (e) => {
+      silenceEvent(e);
+      if (!activeEditElement) return;
+      let currentBlur = activeEditElement.style.getPropertyValue('--blur-val');
+      let isBlurOn = currentBlur === '' || currentBlur === '4px';
+      if (currentBlur === '0px') isBlurOn = false;
+
+      if (isBlurOn) {
+        activeEditElement.style.setProperty('--blur-val', '0px');
+        document.getElementById('vpad-edit-blur').innerHTML = `${ICON.drop} BLUR OFF`;
+      } else {
+        activeEditElement.style.setProperty('--blur-val', '4px');
+        document.getElementById('vpad-edit-blur').innerHTML = `${ICON.drop} BLUR ON`;
+      }
+    });
+
+    document.getElementById('vpad-edit-reset').addEventListener('click', (e) => { silenceEvent(e); resetLayout(); });
+
+    /* --- CORREÇÃO DO TELETRANSPORTE (PAINEL FLUTUANTE) --- */
+    const editHeader = document.getElementById('vpad-edit-header');
+    editHeader.addEventListener('touchstart', (e) => {
+      silenceEvent(e);
+      const touch = e.touches[0]; 
+      
+      let currentLeft = parseFloat(editPanel.style.left);
+      let currentTop = parseFloat(editPanel.style.top);
+      
+      // Se ainda não tiver left/top definidos (centralizado nativamente), pega o centro
+      if (isNaN(currentLeft)) currentLeft = window.innerWidth / 2;
+      if (isNaN(currentTop)) currentTop = window.innerHeight / 2;
+
+      editPanel.style.left = `${currentLeft}px`; 
+      editPanel.style.top = `${currentTop}px`; 
+      editPanel.style.transform = 'none'; // Trava o transform
+      
+      panelDrag = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, startLeft: currentLeft, startTop: currentTop };
+    }, { passive: false });
+
+    editHeader.addEventListener('touchmove', (e) => {
+      if (!panelDrag) return; silenceEvent(e);
+      for (let touch of e.changedTouches) {
+        if (touch.identifier === panelDrag.id) {
+          editPanel.style.left = `${panelDrag.startLeft + (touch.clientX - panelDrag.startX)}px`;
+          editPanel.style.top = `${panelDrag.startTop + (touch.clientY - panelDrag.startY)}px`;
+        }
+      }
+    }, { passive: false });
+    editHeader.addEventListener('touchend', () => { panelDrag = null; }, { capture: true });
+
+    /* --- CORREÇÃO DO TELETRANSPORTE (BOTÕES DO GAMEPAD) --- */
+    document.addEventListener('touchstart', (e) => {
+      if (!isEditMode || e.target.closest('#vpad-edit-panel')) return;
+      const el = e.target.closest('.vpad-element');
+      if (activeEditElement && activeEditElement !== el) activeEditElement.classList.remove('selected');
+      if (!el) { activeEditElement = null; return; }
+      
+      silenceEvent(e);
+      activeEditElement = el; 
+      activeEditElement.classList.add('selected');
+      updatePanelState(); 
+
+      const touch = e.touches[0]; 
+      
+      // Lemos o CSS inline real do elemento e convertemos, ignorando o bounding box que tem escala
+      let startLeftVW = parseFloat(el.style.left) || 0;
+      let startTopVH = parseFloat(el.style.top) || 0;
+      
+      dragData = { 
+        id: touch.identifier, 
+        startX: touch.clientX, 
+        startY: touch.clientY, 
+        startLeftVW: startLeftVW, 
+        startTopVH: startTopVH 
+      };
+    }, { capture: true, passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isEditMode || !dragData || !activeEditElement) return; silenceEvent(e);
+      for (let touch of e.changedTouches) {
+        if (touch.identifier === dragData.id) {
+          // Calcula o delta em px e converte direto para vw/vh
+          const dxVW = ((touch.clientX - dragData.startX) / window.innerWidth) * 100;
+          const dyVH = ((touch.clientY - dragData.startY) / window.innerHeight) * 100;
+          activeEditElement.style.left = `${dragData.startLeftVW + dxVW}vw`; 
+          activeEditElement.style.top = `${dragData.startTopVH + dyVH}vh`;
+        }
+      }
+    }, { capture: true, passive: false });
+
+    document.addEventListener('touchend', (e) => {
+      if (!isEditMode || !dragData) return;
+      for (let touch of e.changedTouches) { if (touch.identifier === dragData.id) dragData = null; }
+    }, { capture: true });
+  }
+
+
+=======================================================
+FICHEIRO: assets/gamepad/05_input.js
+=======================================================
+  // --- INPUT: Analógicos, Botões Digitais e Emulação de Teclado Avançada ---
+  
+  function simulateKey(eventName, key, code, keyCode, shiftKey) {
+    // Procura elementos específicos de stream (Boosteroid usa video ou canvas em wrappers específicos)
+    const target = document.querySelector('video, canvas, #game-stream, .stream-container') || document.body;
+    
+    const event = new KeyboardEvent(eventName, {
+      key: key, code: code, keyCode: keyCode, which: keyCode,
+      shiftKey: shiftKey, bubbles: true, cancelable: true, composed: true
+    });
+    
+    // Hacks pesados para contornar a segurança de engines de cloud gaming que validam keyCode real
+    Object.defineProperties(event, {
+      keyCode: { get: () => keyCode },
+      which: { get: () => keyCode }
+    });
+    
+    target.dispatchEvent(event);
+  }
+
+  function setupStick(zoneId, baseId, knobId, axisX, axisY) {
+    const zone = document.getElementById(zoneId); const base = document.getElementById(baseId); const knob = document.getElementById(knobId);
+    const MAX_RADIUS = 45; let touchId = null; let originX = 0, originY = 0;
+
+    function park() { base.style.left = '50%'; base.style.top = '50%'; base.style.transform = 'translate(-50%, -50%)'; knob.style.transform = 'translate(-50%, -50%)'; }
+    park();
+
+    zone.addEventListener('touchstart', (e) => {
+      if (!isGamepadEnabled || isEditMode) return; silenceEvent(e); if (touchId !== null) return;
+      const touch = e.changedTouches[0]; touchId = touch.identifier; originX = touch.clientX; originY = touch.clientY;
+      const rect = zone.getBoundingClientRect();
+      base.style.left = `${originX - rect.left}px`; base.style.top = `${originY - rect.top}px`;
+      knob.style.transform = `translate(-50%, -50%)`;
+    }, { passive: false, capture: true });
+
+    zone.addEventListener('touchmove', (e) => {
+      if (!isGamepadEnabled || isEditMode) return; silenceEvent(e);
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === touchId) {
+          let dx = e.changedTouches[i].clientX - originX; let dy = e.changedTouches[i].clientY - originY;
+          const dist = Math.hypot(dx, dy);
+          if (dist > MAX_RADIUS) { dx = (dx/dist)*MAX_RADIUS; dy = (dy/dist)*MAX_RADIUS; }
+          knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+          virtualGamepad.axes[axisX] = parseFloat((dx / MAX_RADIUS).toFixed(3)); virtualGamepad.axes[axisY] = parseFloat((dy / MAX_RADIUS).toFixed(3));
+          break;
+        }
+      }
+    }, { passive: false, capture: true });
+
+    const reset = (e) => {
+      if (!isGamepadEnabled || isEditMode) return; silenceEvent(e);
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === touchId) { touchId = null; park(); virtualGamepad.axes[axisX] = 0.0; virtualGamepad.axes[axisY] = 0.0; break; }
+      }
+    };
+    zone.addEventListener('touchend', reset, { passive: false, capture: true });
+    zone.addEventListener('touchcancel', reset, { passive: false, capture: true });
+  }
+
+  function bindBtn(id, gpIndex) {
+    const el = document.getElementById(id); if (!el) return;
+    const setBtn = (pressed) => {
+      if (!isGamepadEnabled || isEditMode) return;
+
+      // Interceptação do Botão Home para Shift+Tab no Boosteroid
+      if (gpIndex === GP.HOME && homeIsSteam) {
+        if (pressed) {
+          simulateKey('keydown', 'Shift', 'ShiftLeft', 16, true);
+          simulateKey('keydown', 'Tab', 'Tab', 9, true);
+        } else {
+          simulateKey('keyup', 'Tab', 'Tab', 9, true);
+          simulateKey('keyup', 'Shift', 'ShiftLeft', 16, false);
+        }
+      } else {
+        virtualGamepad.buttons[gpIndex].pressed = pressed; 
+        virtualGamepad.buttons[gpIndex].value = pressed ? 1.0 : 0.0;
+      }
+
+      if (pressed) el.classList.add('active-press'); else el.classList.remove('active-press');
+    };
+
+    el.addEventListener('touchstart', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(true); } }, { passive: false, capture: true });
+    el.addEventListener('touchend', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(false); } }, { passive: false, capture: true });
+    el.addEventListener('touchcancel', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(false); } }, { passive: false, capture: true });
+  }
+
+  function initInputs() {
+    setupStick('vpad-el-touch-l', 'vpad-stick-base-l', 'vpad-stick-knob-l', 0, 1);
+    setupStick('vpad-el-touch-r', 'vpad-stick-base-r', 'vpad-stick-knob-r', 2, 3);
+    
+    bindBtn('vpad-btn-a', GP.A); bindBtn('vpad-btn-b', GP.B); bindBtn('vpad-btn-x', GP.X); bindBtn('vpad-btn-y', GP.Y);
+    bindBtn('vpad-btn-up', GP.UP); bindBtn('vpad-btn-down', GP.DOWN); bindBtn('vpad-btn-left', GP.LEFT); bindBtn('vpad-btn-right', GP.RIGHT);
+    bindBtn('vpad-btn-lt', GP.LT); bindBtn('vpad-btn-rt', GP.RT); bindBtn('vpad-btn-lb', GP.LB); bindBtn('vpad-btn-rb', GP.RB);
+    bindBtn('vpad-btn-select', GP.SELECT); bindBtn('vpad-btn-home', GP.HOME); bindBtn('vpad-btn-start', GP.START);
+    bindBtn('vpad-btn-l3', GP.L3); bindBtn('vpad-btn-r3', GP.R3);
+  }
+
+
+=======================================================
+FICHEIRO: assets/gamepad/06_init.js
+=======================================================
+  // --- INIT: Inicialização e Eventos Globais ---
+  
+  function clickNativeBoosteroidElement(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      el.click();
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+    }
+  }
+
+  function setupMicSync() {
+    const nativeMic = document.getElementById('mic-control');
+    const vpadMic = document.getElementById('vpad-mic-btn');
+    if (!vpadMic) return;
+
+    if (nativeMic) {
+      const updateMicUI = () => {
+        const isEnabled = nativeMic.getAttribute('aria-pressed') === 'true';
+        if (isEnabled) {
+          vpadMic.innerHTML = `${ICON.mic} MIC ON`;
+          vpadMic.style.borderColor = '#4caf50';
+          vpadMic.style.color = '#4caf50';
+        } else {
+          vpadMic.innerHTML = `${ICON.micOff} MIC OFF`;
+          vpadMic.style.borderColor = ''; 
+          vpadMic.style.color = '';
+        }
+      };
+
+      updateMicUI(); 
+      const observer = new MutationObserver(updateMicUI);
+      observer.observe(nativeMic, { attributes: true, attributeFilter: ['aria-pressed', 'class'] });
+    } else {
+      setTimeout(setupMicSync, 1000);
+    }
+  }
+
+  function initGamepad() {
+    renderUI();
+    initEditLogic();
+    initInputs();
+
+    const toggleBtn = document.getElementById('vpad-toggle-btn');
+    const controlsContainer = document.getElementById('vpad-controls-container');
+
+    // Aplica o estado inicial da UI refletindo a inicialização "OFF"
+    if (!isGamepadEnabled) {
+      toggleBtn.innerHTML = `${ICON.pad} OFF`; 
+      toggleBtn.classList.add('is-off'); 
+      controlsContainer.classList.add('vpad-hidden');
+    }
+
+    document.getElementById('vpad-exit-btn').addEventListener('click', (e) => {
+      silenceEvent(e); clickNativeBoosteroidElement('close-session-control');
+    }, { capture: true });
+
+    document.getElementById('vpad-clipboard-btn').addEventListener('click', (e) => {
+      silenceEvent(e); clickNativeBoosteroidElement('paste-control');
+    }, { capture: true });
+
+    document.getElementById('vpad-mic-btn').addEventListener('click', (e) => {
+      silenceEvent(e); clickNativeBoosteroidElement('mic-control');
+    }, { capture: true });
+
+    document.getElementById('vpad-kb-btn').addEventListener('click', (e) => {
+      silenceEvent(e); clickNativeBoosteroidElement('keyboard-control');
+    }, { capture: true });
+
+    toggleBtn.addEventListener('click', (e) => {
+      silenceEvent(e);
+      if (isEditMode) return;
+      isGamepadEnabled = !isGamepadEnabled;
+      if (isGamepadEnabled) {
+        toggleBtn.innerHTML = `${ICON.pad} ON`; toggleBtn.classList.remove('is-off'); controlsContainer.classList.remove('vpad-hidden'); notifyConnected();
+      } else {
+        toggleBtn.innerHTML = `${ICON.pad} OFF`; toggleBtn.classList.add('is-off'); controlsContainer.classList.add('vpad-hidden'); resetInputs(); notifyDisconnected();
+      }
+    }, { capture: true });
+
+    document.getElementById('vpad-fullscreen-btn').addEventListener('click', (e) => {
+      silenceEvent(e);
+      if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}); } else { document.exitFullscreen(); }
+    }, { capture: true });
+
+    // 🚀 AUTO-TOGGLE INTELIGENTE BASEADO NA URL 🚀
+    let wasInStream = false;
+    
+    function checkStreamState() {
+      // Checa se a URL contém "streaming" indicando que a sessão do jogo foi aberta
+      const isStream = window.location.href.includes('streaming');
+      
+      if (isStream && !wasInStream) {
+        wasInStream = true;
+        // O usuário acabou de entrar no jogo, liga o controle automaticamente
+        if (!isGamepadEnabled && !isEditMode) {
+          isGamepadEnabled = true;
+          toggleBtn.innerHTML = `${ICON.pad} ON`; 
+          toggleBtn.classList.remove('is-off'); 
+          controlsContainer.classList.remove('vpad-hidden'); 
+          notifyConnected();
+        }
+      } else if (!isStream && wasInStream) {
+        wasInStream = false;
+        // O usuário saiu do jogo e voltou pro catálogo, esconde o controle automaticamente
+        if (isGamepadEnabled && !isEditMode) {
+          isGamepadEnabled = false;
+          toggleBtn.innerHTML = `${ICON.pad} OFF`; 
+          toggleBtn.classList.add('is-off'); 
+          controlsContainer.classList.add('vpad-hidden'); 
+          resetInputs(); 
+          notifyDisconnected();
+        }
+      }
+    }
+    
+    // Roda a verificação a cada 1 segundo (a melhor prática para SPAs que não recarregam a página)
+    setInterval(checkStreamState, 1000);
+    checkStreamState();
+
+    setupMicSync();
+  }
+
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initGamepad); } 
+  else { initGamepad(); }
+
+
+=======================================================
+FICHEIRO: assets/gamepad/99_footer.js
+=======================================================
+})();
+
+
+=======================================================
+FICHEIRO: assets/theme/01_main.css
+=======================================================
+/* ==========================================================================
+   TEMA MATERIAL YOU (MD3) PARA BOOSTEROID CLOUDPAD
+   Descrição: Estilização completa da interface web do Boosteroid.
+   ========================================================================== */
+
+/* =======================================================
+   1. RESET VISUAL E AJUSTES DE ESPAÇAMENTO GLOBAL
+   ======================================================= */
+/* Oculta os banners nativos do painel e as abas da loja Fanatical */
+app-dashboard-banner,
+dashboard-banner-navigations,
+.dashboard__banner-wrapper,
+body .tabs--fanatical {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Garante um respiro superior para a biblioteca de jogos, evitando colar no topo */
+body .dashboard .library,
+body #dashboard-library,
+body library {
+  margin-top: 30px !important;
+}
+
+/* Centraliza e alinha perfeitamente as abas de navegação na mesma linha */
+body filter-list tabs.tabs,
+body .tabs.tabs,
+body .tabs-inner.tabs-inner {
+  align-items: center !important;
+}
+
+/* Adiciona um padding confortável (respiro) na barra de controle de filtros */
+filter-controller-widget {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+
+/* =======================================================
+   2. PALETA DE CORES MATERIAL YOU (GOLD & DARK THEME)
+   ======================================================= */
+:root,
+* {
+  /* Cores Principais (Amarelo Dourado Premium e Marrom Escuro) */
+  --md-sys-color-primary: #f5c800 !important;
+  --md-sys-color-on-primary: #523413 !important;
+  --md-sys-color-primary-container: #f5c800 !important;
+  --md-sys-color-on-primary-container: #523413 !important;
+
+  /* Fundos e Superfícies (Grafite Profundo) */
+  --md-sys-color-background: #1C1B1F !important;
+  --md-sys-color-on-background: #E6E1E5 !important;
+  --md-sys-color-surface: #1C1B1F !important;
+  --md-sys-color-surface-variant: #49454F !important;
+
+  /* Containers e Contornos */
+  --md-sys-color-surface-container: #2B2930 !important;
+  --md-sys-color-surface-container-high: #36343B !important;
+  --md-sys-color-outline: #938F99 !important;
+}
+
+/* =======================================================
+   3. FUNDO, CABEÇALHO E PAINÉIS DE INFORMAÇÃO
+   ======================================================= */
+/* Aplica o fundo escuro global e força a fonte padrão do sistema operacional */
+html,
+body,
+body app-root,
+body .main-app,
+body .wrapper,
+body .dashboard {
+  background: var(--md-sys-color-background) !important;
+  background-color: var(--md-sys-color-background) !important;
+  background-image: none !important;
+  color: var(--md-sys-color-on-background) !important;
+  font-family: system-ui, Roboto, sans-serif !important;
+}
+
+/* Estiliza o cabeçalho superior, removendo sobras e adicionando uma linha divisória limpa */
+body .header.header {
+  background: var(--md-sys-color-surface) !important;
+  background-image: none !important;
+  border-bottom: 1px solid var(--md-sys-color-surface-variant) !important;
+}
+
+body .header::before,
+body .header::after {
+  display: none !important;
+}
+
+/* Painel da barra de pesquisa e menus dropdown (fundo limpo) */
+body .command-palette__panel {
+  background: var(--md-sys-color-surface) !important;
+}
+
+/* Cortinas/Backdrops dos menus de filtro abertos */
+filter-controller-widget {
+  --filters-backdrop: var(--md-sys-color-background) !important;
+}
+
+/* Painéis com informações dos jogos (Gradiente translúcido suave) */
+application-info,
+application-short-info {
+  background: linear-gradient(180deg, var(--application-under-eula-panel-top, rgba(28, 27, 31, .7)) 0%, var(--application-under-eula-panel-bottom, rgba(28, 27, 31, .7)) 100%) !important;
+}
+
+/* =======================================================
+   4. BOTÕES, ABAS, SELECTS E FILTROS (PILL SHAPES)
+   ======================================================= */
+/* Botões Principais Destacados (Ex: Jogar, Assinar) */
+body .primary-button.primary-button,
+body .button-primary.button-primary {
+  background: var(--md-sys-color-primary) !important;
+  background-image: none !important;
+  color: var(--md-sys-color-on-primary) !important;
+  border-radius: 100px !important;
+  text-transform: none !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+body .primary-button::before,
+body .button-primary::before,
+body .primary-button::after,
+body .button-primary::after {
+  display: none !important;
+}
+
+/* Barra de Pesquisa (Input) */
+body .command-palette__trigger.command-palette__trigger {
+  background: var(--md-sys-color-surface-container-high) !important;
+  border-radius: 100px !important;
+  border: none !important;
+}
+
+/* Botões Secundários, Abas (Biblioteca/Loja) e Botão de Limpar Filtros */
+body .tab-button.tab-button,
+body .secondary-button,
+body .application__controls-store,
+body .filter-menu-button.filter-menu-button {
+  border-radius: 100px !important;
+  border: 0px solid var(--md-sys-color-surface-variant) !important;
+  background-color: var(--md-sys-color-surface-container) !important;
+  color: var(--md-sys-color-on-background) !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+  padding: 0 20px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+body .tab-button::before,
+body .tab-button::after {
+  display: none !important;
+}
+
+/* Estados de Seleção (Quando uma Aba ou Filtro está ativo) */
+body .tab-button--active.tab-button--active,
+body .filter-menu-button--active.filter-menu-button--active,
+body .filter-menu-button--isDirty.filter-menu-button--isDirty {
+  background: var(--md-sys-color-primary-container) !important;
+  color: var(--md-sys-color-on-primary-container) !important;
+  border-color: transparent !important;
+}
+
+/* Força ícones SVG internos a herdarem a cor do texto corretamente */
+body .filter-menu-button.filter-menu-button p {
+  color: inherit !important;
+}
+
+body .filter-menu-button.filter-menu-button svg {
+  fill: currentColor !important;
+  color: currentColor !important;
+}
+
+/* Dropdowns / Selects (Listas de Plataformas) */
+body .select.select {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+body .select__main.select__main {
+  background: var(--md-sys-color-surface-variant) !important;
+  border-radius: 100px !important;
+  border: none !important;
+}
+
+/* Filtros em Checkbox (Transformados em "Chips" do MD3) */
+body .checkbox-button.checkbox-button {
+  background-color: var(--md-sys-color-surface-container) !important;
+  border: 0px solid var(--md-sys-color-surface-variant) !important;
+  border-radius: 100px !important;
+  box-shadow: none !important;
+  padding: 0 16px !important;
+  height: auto !important;
+  min-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+body .checkbox-button.active.checkbox-button {
+  background: var(--md-sys-color-primary-container) !important;
+  border-color: transparent !important;
+}
+
+body .checkbox__checkmark {
+  display: none !important;
+  /* Esconde o quadrado nativo do checkbox */
+}
+
+body .checkbox__label {
+  padding-left: 0 !important;
+  color: var(--md-sys-color-on-background) !important;
+  font-weight: 500 !important;
+}
+
+body .checkbox-button.active.checkbox-button .checkbox__label {
+  color: var(--md-sys-color-on-primary-container) !important;
+}
+
+/* =======================================================
+   5. CARTÕES DE JOGOS E GALERIA
+   ======================================================= */
+/* Limpa fundos e bordas originais das capas dos jogos */
+body .store-item__image,
+body .store-item__overlay,
+body .store-item__install-showcase {
+  background: var(--md-sys-color-surface-container) !important;
+  background-color: var(--md-sys-color-surface-container) !important;
+  background-image: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Aplica a borda espessa e cantos arredondados no cartão principal do jogo */
+body .store-item__surface {
+  background: var(--md-sys-color-surface-container) !important;
+  border: 3px solid var(--md-sys-color-surface-variant) !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+}
+
+/* Estilo em formato de pílula para itens da visualização mobile */
+.store-item__mobile {
+  border-radius: 100px !important;
+}
+
+/* Remove artefatos e botões redundantes por cima das capas */
+body .store-item__install-showcase::before,
+body .store-item__install-showcase::after,
+body .store-item__mobile-links,
+body .item-game-in--add .store-item__surface::before {
+  display: none !important;
+}
+
+/* Animação suave de flutuação ao passar o mouse ou tocar */
+body .store-item.store-item {
+  transition: transform 0.2s ease !important;
+}
+
+body .store-item:hover .store-item__surface,
+body .store-item.store-item--hovered .store-item__surface {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
+  background: var(--md-sys-color-surface-container-high) !important;
+  background-image: none !important;
+}
+
+/* Escurece a imagem para dar contraste ao título quando tocado */
+body .store-item__overlay {
+  background: rgba(28, 27, 31, 0.5) !important;
+}
+
+body .store-item:hover .store-item__overlay {
+  background: rgba(28, 27, 31, 0.85) !important;
+}
+
+/* Títulos dos jogos mais legíveis e sem sombras cafonas */
+body .item-game-in__content h4 {
+  color: var(--md-sys-color-on-background) !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+}
+
+/* =======================================================
+   6. BADGES, ETIQUETAS E PLATAFORMAS
+   ======================================================= */
+/* Padroniza as etiquetas de "Novo", "Steam", "Epic" com visual pílula e cor neutra */
+body .app-badge,
+body .store-item__new-label,
+body .hopper__badge,
+body .store-item__platform,
+body .button-under.button-under {
+  background: var(--md-sys-color-surface-variant) !important;
+  background-image: none !important;
+  color: var(--md-sys-color-on-background) !important;
+  border: none !important;
+  border-radius: 100px !important;
+}
+
+body .app-badge .app-badge__text {
+  color: var(--md-sys-color-on-background) !important;
+}
+
+/* =======================================================
+   7. LIMPEZA DE INTERFACE (REMOÇÃO DE BANNERS E POLUIÇÃO)
+   ======================================================= */
+/* Oculta os "Upstronauts" (Masotes), Promoções e Selos de Desconto */
+cloud-hopper-item,
+.hopper-item,
+.hopper,
+body card-promo,
+body .store-item__promo,
+body .store-item__promo-text,
+body .store-item__discounts {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* Oculta Botão do Suporte (Canto da tela) */
+#botbutton {
+  display: none !important;
+}
+
+/* Oculta Aviso Flutuante de Cookies (CookieYes) */
+.cky-btn-revisit-wrapper,
+.cky-revisit-bottom-left {
+  display: none !important;
+}
+
+/* Oculta Barra Superior insistindo para baixar o app nativo */
+.download__app {
+  display: none !important;
+}
+
+/* Limpa efeitos e partículas de neon do botão "Magic" */
+body .magic-button.magic-button {
+  background: var(--md-sys-color-primary) !important;
+  color: var(--md-sys-color-on-primary) !important;
+  border-radius: 100px !important;
+  box-shadow: none !important;
+}
+
+body .magic-button__glow,
+body .magic-button__fill,
+body .magic-button__shimmer,
+body .magic-button__ring,
+body .magic-button__sparks {
+  display: none !important;
+}
+
+/* =======================================================
+   8. CONTROLES DE HOVER NOS CARTÕES (JOGAR E REMOVER)
+   ======================================================= */
+/* Ajusta a barra de botões flutuantes para não encostar nas bordas do cartão */
+body .store-item__buttons.store-item__buttons {
+  bottom: 16px !important;
+  padding: 0 16px !important;
+  gap: 8px !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Força o Botão de Jogar a ocupar o espaço restante (Flex Grow) */
+body .store-item__control-button--play.store-item__control-button--play {
+  flex-grow: 1 !important;
+  margin: 0 !important;
+  width: auto !important;
+}
+
+/* Formata o Botão de Remover da Biblioteca para ser um círculo perfeito */
+body .store-item__control-button--secondary.store-item__control-button--secondary {
+  flex: 0 0 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  margin: 0 !important;
+}
+
+/* Injeção de Ícone de Lixeira no botão de remover, ocultando o hifen (-) original */
+body .store-item__control-button--secondary .secondary-button {
+  background: var(--md-sys-color-surface-variant) !important;
+  color: transparent !important;
+  border: none !important;
+  border-radius: 100px !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  position: relative !important;
+  box-shadow: none !important;
+  transition: background 0.2s ease !important;
+}
+
+body .store-item__control-button--secondary .secondary-button:hover {
+  background: var(--md-sys-color-outline) !important;
+}
+
+body .store-item__control-button--secondary .secondary-button::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  margin: auto !important;
+  width: 20px !important;
+  height: 20px !important;
+  background-color: var(--md-sys-color-on-background) !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E") no-repeat center / contain !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E") no-repeat center / contain !important;
+  display: block !important;
+}
+
+/* =======================================================
+   9. OVERLAYS NATIVOS DA SESSÃO DE JOGO
+   ======================================================= */
+/* Oculta os botões mobile do próprio Boosteroid, liberando a tela para nosso Gamepad Virtual */
+#menu.m_menu_wrapper {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(0) !important;
+  z-index: -9999 !important;
+}
+
+/* Oculta alertas nativos ("Toque na tela", "Aviso de rede fraca") que poluem a UI durante o jogo */
+.iphone_tap_message,
+.m_lan_wrapper {
+  display: none !important;
+}
+
+/* Remove a propriedade sticky (que causa bugs visuais no topo) da barra de filtro nativa */
+filter-controller-widget.element-sticky {
+  position: static !important;
+}
+
+=======================================================
+FICHEIRO: assets/theme/02_profile.css
+=======================================================
+/* ==========================================================================
+   TEMA MATERIAL YOU (MD3) - PÁGINA DE PERFIL E CONFIGURAÇÕES
+   Descrição: Estilização premium e correção responsiva de todas as contas e ajustes.
+   ========================================================================== */
+
+/* =======================================================
+   1. LAYOUT GERAL E NAVEGAÇÃO RESPONSIVA (SIDEBAR)
+   ======================================================= */
+body .profile .wrapper {
+  display: flex !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  gap: 24px !important;
+  box-sizing: border-box !important;
+}
+
+body .account__heading {
+  color: var(--md-sys-color-on-background) !important;
+  font-size: 28px !important;
+  padding: 24px 12px 16px 12px !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  letter-spacing: -0.5px !important;
+}
+
+/* Navegação Horizontal Mobile */
+@media (max-width: 900px) {
+  body .profile .wrapper {
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+
+  body sidebar {
+    width: 100% !important;
+    height: auto !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    background: var(--md-sys-color-background) !important;
+    border-bottom: 1px solid var(--md-sys-color-surface-variant) !important;
+  }
+
+  body .profile__navigation {
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body .profile__navigation-gradient {
+    display: none !important;
+  }
+
+  body .profile__main-menu {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    gap: 8px !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  body .profile__main-menu li {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    margin: 0 !important;
+  }
+
+  body .profile__main-menu a {
+    display: flex !important;
+    align-items: center !important;
+    padding: 8px 16px !important;
+    border-radius: 100px !important;
+    background: var(--md-sys-color-surface-container) !important;
+    color: var(--md-sys-color-on-background) !important;
+    white-space: nowrap !important;
+    font-weight: 500 !important;
+  }
+
+  body .profile__main-menu a.active {
+    background: var(--md-sys-color-primary-container) !important;
+    color: var(--md-sys-color-on-primary-container) !important;
+  }
+
+  body .profile__main-menu a svg {
+    margin-bottom: 0 !important;
+    margin-right: 8px !important;
+  }
+
+  body .profile__main-menu a.active svg path,
+  body .profile__main-menu a.active svg ellipse,
+  body .profile__main-menu a.active svg rect {
+    fill: var(--md-sys-color-on-primary-container) !important;
+  }
+}
+
+/* =======================================================
+   2. PADRONIZAÇÃO DE CARDS E CONTAINERS (MD3)
+   ======================================================= */
+body .account__content,
+body .account-content__wrap {
+  max-width: 100% !important;
+  padding: 0 8px !important;
+  box-sizing: border-box !important;
+}
+
+body .content-box__card,
+body .sync-platform,
+body .hotkey-setting,
+body .account-discord,
+body .guide-card {
+  background: var(--md-sys-color-surface-container) !important;
+  border-radius: 24px !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 20px !important;
+  margin-bottom: 16px !important;
+  box-sizing: border-box !important;
+}
+
+/* Remove estilos de containers para evitar duplo padding */
+body .connect-account__card,
+body .guide-inner {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+/* =======================================================
+   3. CABEÇALHOS, TÍTULOS E BOTÕES DE AÇÃO (EDITAR PERFIL)
+   ======================================================= */
+body .content-box__head {
+  display: flex !important;
+  flex-direction: row-reverse !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 16px !important;
+  margin-bottom: 16px !important;
+  width: 100% !important;
+}
+
+body .content-box__head-info {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  flex-grow: 1 !important;
+}
+
+body .content-box__head-controls {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+}
+
+body .content-box__head-title,
+body .sync-platform__title,
+body .account-content__discord-title {
+  color: var(--md-sys-color-primary) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin-bottom: 0 !important;
+}
+
+body .content-box__text,
+body .profile-data__other-text,
+body .hotkey-setting__description,
+body .connect-account__info-text,
+body .sync-platform__top-caption {
+  color: var(--md-sys-color-outline) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+body .connect-account__text,
+body .connect-account__info {
+  padding: 0 8px !important;
+}
+
+body .profile-data__name,
+body .subscription-card__title,
+body .sync-platform__username p {
+  color: var(--md-sys-color-on-background) !important;
+  font-weight: 600 !important;
+}
+
+/* =======================================================
+   4. TOGGLES MD3 E BADGES
+   ======================================================= */
+body app-switcher {
+  display: inline-flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+}
+
+body app-switcher svg {
+  width: 44px !important;
+  height: 26px !important;
+  display: block !important;
+}
+
+body app-switcher svg rect,
+body app-switcher svg circle {
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+body app-switcher svg:not(.not-active) rect {
+  fill: var(--md-sys-color-primary) !important;
+  opacity: 0.4 !important;
+}
+
+body app-switcher svg:not(.not-active) circle {
+  fill: var(--md-sys-color-primary) !important;
+}
+
+body app-switcher svg.not-active rect {
+  fill: var(--md-sys-color-surface-variant) !important;
+  opacity: 1 !important;
+}
+
+body app-switcher svg.not-active circle {
+  fill: var(--md-sys-color-outline) !important;
+}
+
+body .play-possibility--true {
+  background: #0F5223 !important;
+  color: #6DD58C !important;
+  padding: 4px 12px !important;
+  border-radius: 100px !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  margin: 0 !important;
+}
+
+/* =======================================================
+   5. A MINHA SUBSCRIÇÃO
+   ======================================================= */
+body .subscription-card__current {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+body .subscription-card__header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+}
+
+body .subscription-card__status {
+  background: var(--md-sys-color-surface-variant) !important;
+  color: var(--md-sys-color-on-background) !important;
+  padding: 4px 12px !important;
+  border-radius: 100px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+}
+
+body .subscription-card__footer {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 16px !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* =======================================================
+   6. LIGAÇÕES E STREAMING (BOTÕES E LIMPEZA DE ÍCONES)
+   ======================================================= */
+body .sync-platform {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+body .sync-platform__inner {
+  padding-left: none !important;
+  padding-right: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body .sync-platform__body,
+body .content-box__flex-line {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 16px !important;
+}
+
+body .sync-platform__left-side {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+/* Botões Tonal MD3 padronizados */
+body .sync-platform__button,
+body .content-box__control-btn,
+body .subscription-card__info-button,
+body .hotkey-setting__reset-btn {
+  background: var(--md-sys-color-surface-variant) !important;
+  color: var(--md-sys-color-on-background) !important;
+  border-radius: 100px !important;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  border: none !important;
+  box-shadow: none !important;
+  height: auto !important;
+  margin: 0 !important;
+  width: max-content !important;
+  flex: none !important;
+  text-transform: none !important;
+}
+
+body .sync-platform__buttons {
+  display: flex !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+}
+
+/* Texto dos Botões */
+body .sync-platform__button p,
+body .content-box__control-btn span {
+  color: var(--md-sys-color-on-background) !important;
+  margin: 0 !important;
+  text-transform: capitalize !important;
+}
+
+/* REMOÇÃO TOTAL DOS ÍCONES ROSAS/QUEBRADOS NOS BOTÕES DE AÇÃO */
+body .sync-platform__button img,
+body .sync-platform__button svg-icon,
+body .content-box__controls--pb .content-box__control-btn img,
+body .content-box__controls--pb .content-box__control-btn svg-icon {
+  display: none !important;
+}
+
+/* Mantém os ícones funcionais (Editar Perfil, Alterar Senha) com a cor correta */
+body .content-box__control-btn svg path {
+  fill: var(--md-sys-color-on-background) !important;
+}
+
+body .sync-platform__top {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  padding-top: 12px !important;
+  border-top: 1px solid var(--md-sys-color-surface-variant) !important;
+}
+
+/* =======================================================
+   7. CONVÍVIO E RODAPÉ
+   ======================================================= */
+body .account-discord {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  text-decoration: none !important;
+  padding: 16px 20px !important;
+}
+
+body .account-discord:hover {
+  background: var(--md-sys-color-surface-container-high) !important;
+}
+
+body .account-discord__inner {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  gap: 16px !important;
+}
+
+body .account-discord__inner h3 {
+  color: var(--md-sys-color-on-background) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  margin: 0 !important;
+}
+
+body .account-discord__inner img {
+  height: 32px !important;
+  width: auto !important;
+  object-fit: contain !important;
+}
+
+body .footer {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 24px !important;
+  padding: 24px !important;
+}
+
+body .footer__menu {
+  display: flex !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+body .footer__menu a {
+  color: var(--md-sys-color-outline) !important;
+  text-decoration: none !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  transition: color 0.2s !important;
+}
+
+body .footer__menu a:hover {
+  color: var(--md-sys-color-primary) !important;
+}
+
+body .footer__delete-account {
+  background: #e52b2b !important;
+  color: #fffbfb !important;
+  border: 3px solid #6d0d00 !important;
+  border-radius: 100px !important;
+  padding: 10px 24px !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  text-transform: none !important;
+  cursor: pointer !important;
+  text-decoration-line: underline !important;
+  margin-bottom: 10px !important;
+  margin-left: 0px !important;
+  line-height: 14px !important;
+}
+
+/* =======================================================
+   8. DETALHES GERAIS
+   ======================================================= */
+body .select__main.select__main {
+  background: var(--md-sys-color-surface-variant) !important;
+  border-radius: 100px !important;
+  padding: 10px 20px !important;
+  color: var(--md-sys-color-on-background) !important;
+  font-weight: 500 !important;
+}
+
+body hr {
+  border-color: var(--md-sys-color-surface-variant) !important;
+  margin: 24px 0 !important;
+  opacity: 0.5 !important;
+}
+
+body .warning {
+  background: rgba(245, 200, 0, 0.1) !important;
+  border: 1px solid rgba(245, 200, 0, 0.2) !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+  margin-top: 16px !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+}
+
+body .warning p {
+  margin: 0 !important;
+  font-size: 13px !important;
+  color: var(--md-sys-color-on-background) !important;
+  line-height: 1.5 !important;
+}
+
+body .warning svg path {
+  fill: var(--md-sys-color-primary) !important;
+}
+
+/* Correções específicas para Mobile */
+@media (max-width: 600px) {
+  body .user-info .content-box__card {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  body .user-info__profile-img {
+    margin-right: 0 !important;
+    margin-bottom: 16px !important;
+  }
+
+  body .user-info__profile-data {
+    align-items: center !important;
+    width: 100% !important;
+  }
+
+  body .profile-data__socials-item,
+  body .profile-data__other-item {
+    justify-content: center !important;
+  }
+
+  body .sync-platform__body {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 20px !important;
+  }
+
+  body .sync-platform__buttons {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  body .sync-platform__button {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+}
