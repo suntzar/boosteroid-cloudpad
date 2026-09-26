@@ -527,3 +527,15 @@ body .warning svg path {
     justify-content: center !important;
   }
 }
+
+/* =======================================================
+   10. CLOUDPAD SETTINGS TAB (CUSTOM INJECTION)
+   ======================================================= */
+/* Oculta os painéis nativos do Angular quando a nossa aba está ativa */
+body.vpad-settings-active .profile__content > *:not(#vpad-settings-panel):not(router-outlet) {
+  display: none !important;
+}
+
+#vpad-settings-panel {
+  width: 100% !important;
+}

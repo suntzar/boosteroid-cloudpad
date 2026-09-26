@@ -45,9 +45,8 @@
 
     const toggleBtn = document.getElementById('vpad-toggle-btn');
     const controlsContainer = document.getElementById('vpad-controls-container');
-    const topBar = document.getElementById('vpad-top-bar'); // Nova Referência
+    const topBar = document.getElementById('vpad-top-bar'); 
 
-    // Aplica o estado inicial da UI refletindo a inicialização "OFF"
     if (!isGamepadEnabled) {
       toggleBtn.innerHTML = `${ICON.pad} OFF`; 
       toggleBtn.classList.add('is-off'); 
@@ -86,18 +85,20 @@
       if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}); } else { document.exitFullscreen(); }
     }, { capture: true });
 
-    // 🚀 AUTO-TOGGLE INTELIGENTE BASEADO NA URL 🚀
+    // 🚀 MONITORAMENTO GLOBAL (STREAMING & PERFIL) 🚀
     let wasInStream = false;
     
-    function checkStreamState() {
-      // Checa se a URL contém "streaming" indicando que a sessão do jogo foi aberta
+    function monitorAppRoutings() {
+      // 1. Injeta a Aba de Configurações do CloudPad (se estiver na tela de Perfil)
+      if (typeof injectProfileTab === 'function') injectProfileTab();
+
+      // 2. Checa o Auto-Toggle Inteligente do Jogo
       const isStream = window.location.href.includes('streaming');
       
       if (isStream && !wasInStream) {
         wasInStream = true;
-        topBar.classList.remove('vpad-hidden'); // Mostra a barra superior
+        topBar.classList.remove('vpad-hidden');
 
-        // O usuário acabou de entrar no jogo, liga o controle automaticamente
         if (!isGamepadEnabled && !isEditMode) {
           isGamepadEnabled = true;
           toggleBtn.innerHTML = `${ICON.pad} ON`; 
@@ -107,14 +108,12 @@
         }
       } else if (!isStream && wasInStream) {
         wasInStream = false;
-        topBar.classList.add('vpad-hidden'); // Esconde a barra superior
+        topBar.classList.add('vpad-hidden');
 
-        // Garante que o modo de edição seja fechado ao sair da stream de forma brusca
         if (isEditMode) {
           document.getElementById('vpad-edit-toggle-btn').click();
         }
 
-        // O usuário saiu do jogo e voltou pro catálogo, esconde o controle automaticamente
         if (isGamepadEnabled) {
           isGamepadEnabled = false;
           toggleBtn.innerHTML = `${ICON.pad} OFF`; 
@@ -126,13 +125,11 @@
       }
     }
     
-    // Roda a verificação a cada 1 segundo (a melhor prática para SPAs que não recarregam a página)
-    setInterval(checkStreamState, 1000);
-    checkStreamState();
+    setInterval(monitorAppRoutings, 1000);
+    monitorAppRoutings();
 
     setupMicSync();
   }
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initGamepad); } 
   else { initGamepad(); }
-
