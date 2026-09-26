@@ -45,6 +45,7 @@
 
     const toggleBtn = document.getElementById('vpad-toggle-btn');
     const controlsContainer = document.getElementById('vpad-controls-container');
+    const topBar = document.getElementById('vpad-top-bar'); // Nova Referência
 
     // Aplica o estado inicial da UI refletindo a inicialização "OFF"
     if (!isGamepadEnabled) {
@@ -94,6 +95,8 @@
       
       if (isStream && !wasInStream) {
         wasInStream = true;
+        topBar.classList.remove('vpad-hidden'); // Mostra a barra superior
+
         // O usuário acabou de entrar no jogo, liga o controle automaticamente
         if (!isGamepadEnabled && !isEditMode) {
           isGamepadEnabled = true;
@@ -104,8 +107,15 @@
         }
       } else if (!isStream && wasInStream) {
         wasInStream = false;
+        topBar.classList.add('vpad-hidden'); // Esconde a barra superior
+
+        // Garante que o modo de edição seja fechado ao sair da stream de forma brusca
+        if (isEditMode) {
+          document.getElementById('vpad-edit-toggle-btn').click();
+        }
+
         // O usuário saiu do jogo e voltou pro catálogo, esconde o controle automaticamente
-        if (isGamepadEnabled && !isEditMode) {
+        if (isGamepadEnabled) {
           isGamepadEnabled = false;
           toggleBtn.innerHTML = `${ICON.pad} OFF`; 
           toggleBtn.classList.add('is-off'); 
@@ -125,3 +135,4 @@
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initGamepad); } 
   else { initGamepad(); }
+

@@ -79,7 +79,7 @@
     const root = document.createElement('div');
     root.id = 'vpad-root';
     root.innerHTML = `
-      <div id="vpad-top-bar">
+      <div id="vpad-top-bar" class="vpad-hidden">
         <div id="vpad-exit-btn" class="vpad-glass-btn vpad-top-btn is-danger">${ICON.power} SAIR</div>
         <div id="vpad-clipboard-btn" class="vpad-glass-btn vpad-top-btn">${ICON.clipboard} COLAR</div>
         <div id="vpad-mic-btn" class="vpad-glass-btn vpad-top-btn">${ICON.micOff} MIC OFF</div>
