@@ -13,7 +13,7 @@ CSS_BASE64=$(base64 assets/theme.css | tr -d '\n')
 # 2. Cria dinamicamente um módulo injetor de CSS exclusivo para o Tampermonkey
 # Ele faz uma checagem de segurança (!window.AndroidClipboard) para ter 100% de certeza
 # de que não vai rodar se por acaso for parar dentro do app Android.
-cat <<EOF > assets/gamepad/07_tampermonkey_theme.js
+cat <<EOF > assets/gamepad/08_tampermonkey_theme.js
   // --- TAMPERMONKEY SPECIFIC: Injeção do Tema MD3 ---
   if (!window.AndroidClipboard) {
     const injectTheme = () => {
@@ -30,18 +30,10 @@ EOF
 
 echo "=== Empacotando módulos JS ==="
 # 3. Junta todos os módulos em um arquivo de distribuição (.user.js)
-cat assets/gamepad/00_header.js \
-    assets/gamepad/01_core.js \
-    assets/gamepad/02_layout.js \
-    assets/gamepad/03_ui.js \
-    assets/gamepad/04_edit.js \
-    assets/gamepad/05_input.js \
-    assets/gamepad/06_init.js \
-    assets/gamepad/07_tampermonkey_theme.js \
-    assets/gamepad/99_footer.js > dist/boosteroid-cloudpad.user.js
+cat assets/gamepad/*.js > dist/boosteroid-cloudpad.user.js
 
 # 4. Limpa o módulo temporário
-rm assets/gamepad/07_tampermonkey_theme.js
+rm assets/gamepad/08_tampermonkey_theme.js
 
 echo "=== SUCESSO ==="
 echo "Userscript gerado em: dist/boosteroid-cloudpad.user.js"
