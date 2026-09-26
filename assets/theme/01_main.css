@@ -213,7 +213,6 @@ body .checkbox-button.active.checkbox-button {
 
 body .checkbox__checkmark {
   display: none !important;
-  /* Esconde o quadrado nativo do checkbox */
 }
 
 body .checkbox__label {
@@ -426,22 +425,8 @@ body .store-item__control-button--secondary .secondary-button::after {
 }
 
 /* =======================================================
-   9. OVERLAYS NATIVOS DA SESSÃO DE JOGO
+   9. OVERLAYS NATIVOS DA SESSÃO DE JOGO E FILTROS
    ======================================================= */
-/* Oculta os botões mobile do próprio Boosteroid, liberando a tela para nosso Gamepad Virtual */
-#menu.m_menu_wrapper {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: scale(0) !important;
-  z-index: -9999 !important;
-}
-
-/* Oculta alertas nativos ("Toque na tela", "Aviso de rede fraca") que poluem a UI durante o jogo */
-.iphone_tap_message,
-.m_lan_wrapper {
-  display: none !important;
-}
-
 /* Remove a propriedade sticky (que causa bugs visuais no topo) da barra de filtro nativa */
 filter-controller-widget.element-sticky {
   position: static !important;
