@@ -1,6 +1,5 @@
 /* ==========================================================================
    TEMA MATERIAL YOU (MD3) - PÁGINA DE PERFIL E CONFIGURAÇÕES
-   Descrição: Estilização premium e correção responsiva de todas as contas e ajustes.
    ========================================================================== */
 
 /* =======================================================
@@ -23,13 +22,11 @@ body .account__heading {
   letter-spacing: -0.5px !important;
 }
 
-/* Navegação Horizontal Mobile */
 @media (max-width: 900px) {
   body .profile .wrapper {
     flex-direction: column !important;
     gap: 0 !important;
   }
-
   body sidebar {
     width: 100% !important;
     height: auto !important;
@@ -39,16 +36,13 @@ body .account__heading {
     background: var(--md-sys-color-background) !important;
     border-bottom: 1px solid var(--md-sys-color-surface-variant) !important;
   }
-
   body .profile__navigation {
     width: 100% !important;
     padding: 0 !important;
   }
-
   body .profile__navigation-gradient {
     display: none !important;
   }
-
   body .profile__main-menu {
     display: flex !important;
     flex-direction: row !important;
@@ -59,13 +53,11 @@ body .account__heading {
     margin: 0 !important;
     -webkit-overflow-scrolling: touch !important;
   }
-
   body .profile__main-menu li {
     flex: 0 0 auto !important;
     width: auto !important;
     margin: 0 !important;
   }
-
   body .profile__main-menu a {
     display: flex !important;
     align-items: center !important;
@@ -76,17 +68,14 @@ body .account__heading {
     white-space: nowrap !important;
     font-weight: 500 !important;
   }
-
   body .profile__main-menu a.active {
     background: var(--md-sys-color-primary-container) !important;
     color: var(--md-sys-color-on-primary-container) !important;
   }
-
   body .profile__main-menu a svg {
     margin-bottom: 0 !important;
     margin-right: 8px !important;
   }
-
   body .profile__main-menu a.active svg path,
   body .profile__main-menu a.active svg ellipse,
   body .profile__main-menu a.active svg rect {
@@ -118,7 +107,6 @@ body .guide-card {
   box-sizing: border-box !important;
 }
 
-/* Remove estilos de containers para evitar duplo padding */
 body .connect-account__card,
 body .guide-inner {
   background: transparent !important;
@@ -308,7 +296,6 @@ body .sync-platform__left-side {
   gap: 12px !important;
 }
 
-/* Botões Tonal MD3 padronizados */
 body .sync-platform__button,
 body .content-box__control-btn,
 body .subscription-card__info-button,
@@ -339,7 +326,6 @@ body .sync-platform__buttons {
   justify-content: flex-end !important;
 }
 
-/* Texto dos Botões */
 body .sync-platform__button p,
 body .content-box__control-btn span {
   color: var(--md-sys-color-on-background) !important;
@@ -347,7 +333,6 @@ body .content-box__control-btn span {
   text-transform: capitalize !important;
 }
 
-/* REMOÇÃO TOTAL DOS ÍCONES ROSAS/QUEBRADOS NOS BOTÕES DE AÇÃO */
 body .sync-platform__button img,
 body .sync-platform__button svg-icon,
 body .content-box__controls--pb .content-box__control-btn img,
@@ -355,7 +340,6 @@ body .content-box__controls--pb .content-box__control-btn svg-icon {
   display: none !important;
 }
 
-/* Mantém os ícones funcionais (Editar Perfil, Alterar Senha) com a cor correta */
 body .content-box__control-btn svg path {
   fill: var(--md-sys-color-on-background) !important;
 }
@@ -450,7 +434,7 @@ body .footer__delete-account {
 }
 
 /* =======================================================
-   8. DETALHES GERAIS
+   8. DETALHES GERAIS E WARNINGS
    ======================================================= */
 body .select__main.select__main {
   background: var(--md-sys-color-surface-variant) !important;
@@ -486,6 +470,17 @@ body .warning p {
 
 body .warning svg path {
   fill: var(--md-sys-color-primary) !important;
+}
+
+/* =======================================================
+   10. CLOUDPAD SETTINGS TAB (CUSTOM INJECTION)
+   ======================================================= */
+body.vpad-settings-active .profile__content > *:not(#vpad-settings-panel):not(router-outlet) {
+  display: none !important;
+}
+
+#vpad-settings-panel {
+  width: 100% !important;
 }
 
 /* Correções específicas para Mobile */
@@ -526,16 +521,4 @@ body .warning svg path {
     flex: 1 !important;
     justify-content: center !important;
   }
-}
-
-/* =======================================================
-   10. CLOUDPAD SETTINGS TAB (CUSTOM INJECTION)
-   ======================================================= */
-/* Oculta os painéis nativos do Angular quando a nossa aba está ativa */
-body.vpad-settings-active .profile__content > *:not(#vpad-settings-panel):not(router-outlet) {
-  display: none !important;
-}
-
-#vpad-settings-panel {
-  width: 100% !important;
 }

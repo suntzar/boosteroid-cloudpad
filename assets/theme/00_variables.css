@@ -1,0 +1,54 @@
+/* ==========================================================================
+   TEMA MATERIAL YOU (MD3) PARA BOOSTEROID CLOUDPAD
+   ========================================================================== */
+
+/* =======================================================
+   1. RESET VISUAL E AJUSTES DE ESPAÇAMENTO GLOBAL
+   ======================================================= */
+app-dashboard-banner,
+dashboard-banner-navigations,
+.dashboard__banner-wrapper,
+body .tabs--fanatical {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body .dashboard .library,
+body #dashboard-library,
+body library {
+  margin-top: 30px !important;
+}
+
+body filter-list tabs.tabs,
+body .tabs.tabs,
+body .tabs-inner.tabs-inner {
+  align-items: center !important;
+}
+
+filter-controller-widget {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+
+/* =======================================================
+   2. PALETA DE CORES MATERIAL YOU (GOLD & DARK THEME)
+   ======================================================= */
+:root,
+* {
+  --md-sys-color-primary: #f5c800 !important;
+  --md-sys-color-on-primary: #523413 !important;
+  --md-sys-color-primary-container: #f5c800 !important;
+  --md-sys-color-on-primary-container: #523413 !important;
+
+  --md-sys-color-background: #1C1B1F !important;
+  --md-sys-color-on-background: #E6E1E5 !important;
+  --md-sys-color-surface: #1C1B1F !important;
+  --md-sys-color-surface-variant: #49454F !important;
+
+  --md-sys-color-surface-container: #2B2930 !important;
+  --md-sys-color-surface-container-high: #36343B !important;
+  --md-sys-color-outline: #938F99 !important;
+}

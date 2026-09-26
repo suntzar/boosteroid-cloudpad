@@ -1,0 +1,130 @@
+/* =======================================================
+   4. BOTÕES, ABAS, SELECTS E FILTROS (PILL SHAPES)
+   ======================================================= */
+body .primary-button.primary-button,
+body .button-primary.button-primary {
+  background: var(--md-sys-color-primary) !important;
+  background-image: none !important;
+  color: var(--md-sys-color-on-primary) !important;
+  border-radius: 100px !important;
+  text-transform: none !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+body .primary-button::before,
+body .button-primary::before,
+body .primary-button::after,
+body .button-primary::after {
+  display: none !important;
+}
+
+body .command-palette__trigger.command-palette__trigger {
+  background: var(--md-sys-color-surface-container-high) !important;
+  border-radius: 100px !important;
+  border: none !important;
+}
+
+body .tab-button.tab-button,
+body .secondary-button,
+body .application__controls-store,
+body .filter-menu-button.filter-menu-button {
+  border-radius: 100px !important;
+  border: 0px solid var(--md-sys-color-surface-variant) !important;
+  background-color: var(--md-sys-color-surface-container) !important;
+  color: var(--md-sys-color-on-background) !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+  padding: 0 20px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+body .tab-button::before,
+body .tab-button::after {
+  display: none !important;
+}
+
+body .tab-button--active.tab-button--active,
+body .filter-menu-button--active.filter-menu-button--active,
+body .filter-menu-button--isDirty.filter-menu-button--isDirty {
+  background: var(--md-sys-color-primary-container) !important;
+  color: var(--md-sys-color-on-primary-container) !important;
+  border-color: transparent !important;
+}
+
+body .filter-menu-button.filter-menu-button p {
+  color: inherit !important;
+}
+
+body .filter-menu-button.filter-menu-button svg {
+  fill: currentColor !important;
+  color: currentColor !important;
+}
+
+body .select.select {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+body .select__main.select__main {
+  background: var(--md-sys-color-surface-variant) !important;
+  border-radius: 100px !important;
+  border: none !important;
+}
+
+body .checkbox-button.checkbox-button {
+  background-color: var(--md-sys-color-surface-container) !important;
+  border: 0px solid var(--md-sys-color-surface-variant) !important;
+  border-radius: 100px !important;
+  box-shadow: none !important;
+  padding: 0 16px !important;
+  height: auto !important;
+  min-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+body .checkbox-button.active.checkbox-button {
+  background: var(--md-sys-color-primary-container) !important;
+  border-color: transparent !important;
+}
+
+body .checkbox__checkmark {
+  display: none !important;
+}
+
+body .checkbox__label {
+  padding-left: 0 !important;
+  color: var(--md-sys-color-on-background) !important;
+  font-weight: 500 !important;
+}
+
+body .checkbox-button.active.checkbox-button .checkbox__label {
+  color: var(--md-sys-color-on-primary-container) !important;
+}
+
+/* =======================================================
+   6. BADGES, ETIQUETAS E PLATAFORMAS
+   ======================================================= */
+body .app-badge,
+body .store-item__new-label,
+body .hopper__badge,
+body .store-item__platform,
+body .button-under.button-under {
+  background: var(--md-sys-color-surface-variant) !important;
+  background-image: none !important;
+  color: var(--md-sys-color-on-background) !important;
+  border: none !important;
+  border-radius: 100px !important;
+}
+
+body .app-badge .app-badge__text {
+  color: var(--md-sys-color-on-background) !important;
+}

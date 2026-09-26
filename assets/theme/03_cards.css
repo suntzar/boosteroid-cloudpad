@@ -1,0 +1,113 @@
+/* =======================================================
+   5. CARTÕES DE JOGOS E GALERIA
+   ======================================================= */
+body .store-item__image,
+body .store-item__overlay,
+body .store-item__install-showcase {
+  background: var(--md-sys-color-surface-container) !important;
+  background-color: var(--md-sys-color-surface-container) !important;
+  background-image: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+body .store-item__surface {
+  background: var(--md-sys-color-surface-container) !important;
+  border: 3px solid var(--md-sys-color-surface-variant) !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+}
+
+.store-item__mobile {
+  border-radius: 100px !important;
+}
+
+body .store-item__install-showcase::before,
+body .store-item__install-showcase::after,
+body .store-item__mobile-links,
+body .item-game-in--add .store-item__surface::before {
+  display: none !important;
+}
+
+body .store-item.store-item {
+  transition: transform 0.2s ease !important;
+}
+
+body .store-item:hover .store-item__surface,
+body .store-item.store-item--hovered .store-item__surface {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
+  background: var(--md-sys-color-surface-container-high) !important;
+  background-image: none !important;
+}
+
+body .store-item__overlay {
+  background: rgba(28, 27, 31, 0.5) !important;
+}
+
+body .store-item:hover .store-item__overlay {
+  background: rgba(28, 27, 31, 0.85) !important;
+}
+
+body .item-game-in__content h4 {
+  color: var(--md-sys-color-on-background) !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+}
+
+/* =======================================================
+   8. CONTROLES DE HOVER NOS CARTÕES (JOGAR E REMOVER)
+   ======================================================= */
+body .store-item__buttons.store-item__buttons {
+  bottom: 16px !important;
+  padding: 0 16px !important;
+  gap: 8px !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+body .store-item__control-button--play.store-item__control-button--play {
+  flex-grow: 1 !important;
+  margin: 0 !important;
+  width: auto !important;
+}
+
+body .store-item__control-button--secondary.store-item__control-button--secondary {
+  flex: 0 0 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  margin: 0 !important;
+}
+
+body .store-item__control-button--secondary .secondary-button {
+  background: var(--md-sys-color-surface-variant) !important;
+  color: transparent !important;
+  border: none !important;
+  border-radius: 100px !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  position: relative !important;
+  box-shadow: none !important;
+  transition: background 0.2s ease !important;
+}
+
+body .store-item__control-button--secondary .secondary-button:hover {
+  background: var(--md-sys-color-outline) !important;
+}
+
+body .store-item__control-button--secondary .secondary-button::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  margin: auto !important;
+  width: 20px !important;
+  height: 20px !important;
+  background-color: var(--md-sys-color-on-background) !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E") no-repeat center / contain !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E") no-repeat center / contain !important;
+  display: block !important;
+}

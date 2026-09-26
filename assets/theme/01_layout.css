@@ -1,0 +1,95 @@
+/* =======================================================
+   3. FUNDO, CABEÇALHO E PAINÉIS DE INFORMAÇÃO
+   ======================================================= */
+html,
+body,
+body app-root,
+body .main-app,
+body .wrapper,
+body .dashboard {
+  background: var(--md-sys-color-background) !important;
+  background-color: var(--md-sys-color-background) !important;
+  background-image: none !important;
+  color: var(--md-sys-color-on-background) !important;
+  font-family: system-ui, Roboto, sans-serif !important;
+}
+
+body .header.header {
+  background: var(--md-sys-color-surface) !important;
+  background-image: none !important;
+  border-bottom: 1px solid var(--md-sys-color-surface-variant) !important;
+}
+
+body .header::before,
+body .header::after {
+  display: none !important;
+}
+
+body .command-palette__panel {
+  background: var(--md-sys-color-surface) !important;
+}
+
+filter-controller-widget {
+  --filters-backdrop: var(--md-sys-color-background) !important;
+}
+
+application-info,
+application-short-info {
+  background: linear-gradient(180deg, var(--application-under-eula-panel-top, rgba(28, 27, 31, .7)) 0%, var(--application-under-eula-panel-bottom, rgba(28, 27, 31, .7)) 100%) !important;
+}
+
+/* =======================================================
+   7. LIMPEZA DE INTERFACE (REMOÇÃO DE BANNERS E POLUIÇÃO)
+   ======================================================= */
+cloud-hopper-item,
+.hopper-item,
+.hopper,
+body card-promo,
+body .store-item__promo,
+body .store-item__promo-text,
+body .store-item__discounts {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#botbutton {
+  display: none !important;
+}
+
+.cky-btn-revisit-wrapper,
+.cky-revisit-bottom-left {
+  display: none !important;
+}
+
+.download__app {
+  display: none !important;
+}
+
+body .magic-button.magic-button {
+  background: var(--md-sys-color-primary) !important;
+  color: var(--md-sys-color-on-primary) !important;
+  border-radius: 100px !important;
+  box-shadow: none !important;
+}
+
+body .magic-button__glow,
+body .magic-button__fill,
+body .magic-button__shimmer,
+body .magic-button__ring,
+body .magic-button__sparks {
+  display: none !important;
+}
+
+/* =======================================================
+   9. OVERLAYS NATIVOS DA SESSÃO DE JOGO E FILTROS
+   ======================================================= */
+filter-controller-widget.element-sticky {
+  position: static !important;
+}
