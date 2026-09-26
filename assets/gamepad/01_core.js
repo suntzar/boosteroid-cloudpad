@@ -28,17 +28,35 @@
     SELECT: 8, START: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, HOME: 16
   };
 
-  // 🚀 CORREÇÃO: Salva a função nativa para não "cegar" o navegador para controles físicos
+  // 🚀 Salva a função nativa para ler o hardware real
   const nativeGetGamepads = navigator.getGamepads ? navigator.getGamepads.bind(navigator) : () => [];
 
   navigator.getGamepads = function () {
     const physicalPads = nativeGetGamepads() || [];
     const result = [null, null, null, null];
     
-    // 1. Mantém os controles físicos reais intocados nos seus respectivos slots
+    // 1. Mantém os controles físicos reais, MAS mascara o botão HOME se o Teclado Mágico estiver ativo
     for (let i = 0; i < 4; i++) {
       if (physicalPads[i]) {
-        result[i] = physicalPads[i];
+        if (homeIsSteam && physicalPads[i].buttons && physicalPads[i].buttons.length > 16) {
+          // Cria um clone superficial do gamepad para interceptar e "cegar" o botão 16 para a nuvem
+          const clonedButtons = [...physicalPads[i].buttons];
+          clonedButtons[16] = { pressed: false, touched: false, value: 0.0 };
+          
+          result[i] = {
+            id: physicalPads[i].id,
+            index: physicalPads[i].index,
+            connected: physicalPads[i].connected,
+            timestamp: physicalPads[i].timestamp,
+            mapping: physicalPads[i].mapping,
+            axes: physicalPads[i].axes,
+            vibrationActuator: physicalPads[i].vibrationActuator,
+            buttons: clonedButtons
+          };
+        } else {
+          // Se a opção estiver desligada, repassa o controle 100% puro
+          result[i] = physicalPads[i];
+        }
       }
     }
 

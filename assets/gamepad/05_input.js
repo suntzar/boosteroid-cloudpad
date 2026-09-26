@@ -1,7 +1,6 @@
   // --- INPUT: Analógicos, Botões Digitais e Emulação de Teclado Avançada ---
   
   function simulateKey(eventName, key, code, keyCode, shiftKey) {
-    // Procura elementos específicos de stream (Boosteroid usa video ou canvas em wrappers específicos)
     const target = document.querySelector('video, canvas, #game-stream, .stream-container') || document.body;
     
     const event = new KeyboardEvent(eventName, {
@@ -9,7 +8,6 @@
       shiftKey: shiftKey, bubbles: true, cancelable: true, composed: true
     });
     
-    // Hacks pesados para contornar a segurança de engines de cloud gaming que validam keyCode real
     Object.defineProperties(event, {
       keyCode: { get: () => keyCode },
       which: { get: () => keyCode }
@@ -62,7 +60,7 @@
     const setBtn = (pressed) => {
       if (!isGamepadEnabled || isEditMode) return;
 
-      // Interceptação do Botão Home para Shift+Tab no Boosteroid
+      // Interceptação do Botão Home (Virtual)
       if (gpIndex === GP.HOME && homeIsSteam) {
         if (pressed) {
           simulateKey('keydown', 'Shift', 'ShiftLeft', 16, true);
@@ -84,6 +82,34 @@
     el.addEventListener('touchcancel', (e) => { if(!isEditMode){ silenceEvent(e); setBtn(false); } }, { passive: false, capture: true });
   }
 
+  // 🚀 VIGILANTE DE HARDWARE REAL: Escuta o Controle Físico a 60FPS 🚀
+  const lastPhysicalHomeStates = [false, false, false, false];
+
+  function pollPhysicalGamepads() {
+    const physicalPads = nativeGetGamepads() || [];
+    for (let i = 0; i < 4; i++) {
+      const pad = physicalPads[i];
+      if (pad && pad.buttons && pad.buttons.length > 16) {
+        const isPressed = pad.buttons[16].pressed;
+        if (isPressed !== lastPhysicalHomeStates[i]) {
+          lastPhysicalHomeStates[i] = isPressed;
+          
+          // Se "Teclado Mágico" estiver ativo, injeta Shift+Tab no lugar!
+          if (homeIsSteam) {
+            if (isPressed) {
+              simulateKey('keydown', 'Shift', 'ShiftLeft', 16, true);
+              simulateKey('keydown', 'Tab', 'Tab', 9, true);
+            } else {
+              simulateKey('keyup', 'Tab', 'Tab', 9, true);
+              simulateKey('keyup', 'Shift', 'ShiftLeft', 16, false);
+            }
+          }
+        }
+      }
+    }
+    requestAnimationFrame(pollPhysicalGamepads);
+  }
+
   function initInputs() {
     setupStick('vpad-el-touch-l', 'vpad-stick-base-l', 'vpad-stick-knob-l', 0, 1);
     setupStick('vpad-el-touch-r', 'vpad-stick-base-r', 'vpad-stick-knob-r', 2, 3);
@@ -93,4 +119,7 @@
     bindBtn('vpad-btn-lt', GP.LT); bindBtn('vpad-btn-rt', GP.RT); bindBtn('vpad-btn-lb', GP.LB); bindBtn('vpad-btn-rb', GP.RB);
     bindBtn('vpad-btn-select', GP.SELECT); bindBtn('vpad-btn-home', GP.HOME); bindBtn('vpad-btn-start', GP.START);
     bindBtn('vpad-btn-l3', GP.L3); bindBtn('vpad-btn-r3', GP.R3);
+
+    // Inicia a escuta infinita dos gamepads USB/Bluetooth
+    pollPhysicalGamepads();
   }
