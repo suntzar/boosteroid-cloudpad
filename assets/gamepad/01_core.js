@@ -28,39 +28,60 @@
     SELECT: 8, START: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, HOME: 16
   };
 
-  // 🚀 Salva a função nativa para ler o hardware real
+  // 🚀 Salva a função nativa para ler o hardware real sem ser bloqueado
   const nativeGetGamepads = navigator.getGamepads ? navigator.getGamepads.bind(navigator) : () => [];
+  
+  // 🚀 CACHE DE IDENTIDADE: Mantém o controle mascarado vivo sem recriar objetos a cada frame
+  const physicalPadsWrapper = [null, null, null, null];
 
   navigator.getGamepads = function () {
     const physicalPads = nativeGetGamepads() || [];
     const result = [null, null, null, null];
     
-    // 1. Mantém os controles físicos reais, MAS mascara o botão HOME se o Teclado Mágico estiver ativo
+    // 1. Processa os controles físicos
     for (let i = 0; i < 4; i++) {
-      if (physicalPads[i]) {
-        if (homeIsSteam && physicalPads[i].buttons && physicalPads[i].buttons.length > 16) {
-          // Cria um clone superficial do gamepad para interceptar e "cegar" o botão 16 para a nuvem
-          const clonedButtons = [...physicalPads[i].buttons];
-          clonedButtons[16] = { pressed: false, touched: false, value: 0.0 };
+      const pad = physicalPads[i];
+      if (pad) {
+        if (homeIsSteam && pad.buttons && pad.buttons.length > 16) {
           
-          result[i] = {
-            id: physicalPads[i].id,
-            index: physicalPads[i].index,
-            connected: physicalPads[i].connected,
-            timestamp: physicalPads[i].timestamp,
-            mapping: physicalPads[i].mapping,
-            axes: physicalPads[i].axes,
-            vibrationActuator: physicalPads[i].vibrationActuator,
-            buttons: clonedButtons
-          };
+          // Se o Wrapper ainda não existe, cria herdando o DNA original do Gamepad (evita bloqueio por instanceof)
+          if (!physicalPadsWrapper[i]) {
+            physicalPadsWrapper[i] = Object.create(Object.getPrototypeOf(pad));
+          }
+          const wrapper = physicalPadsWrapper[i];
+          
+          // Atualiza as propriedades dinâmicas sem perder a referência da memória
+          wrapper.id = pad.id;
+          wrapper.index = pad.index;
+          wrapper.connected = pad.connected;
+          wrapper.timestamp = pad.timestamp;
+          wrapper.mapping = pad.mapping;
+          wrapper.axes = pad.axes;
+          wrapper.vibrationActuator = pad.vibrationActuator;
+          
+          // Copia e mascara APENAS o botão 16 (HOME)
+          const newButtons = new Array(pad.buttons.length);
+          for (let b = 0; b < pad.buttons.length; b++) {
+            if (b === 16) {
+              newButtons[b] = { pressed: false, touched: false, value: 0.0 };
+            } else {
+              newButtons[b] = pad.buttons[b];
+            }
+          }
+          wrapper.buttons = newButtons;
+          result[i] = wrapper;
+
         } else {
-          // Se a opção estiver desligada, repassa o controle 100% puro
-          result[i] = physicalPads[i];
+          // Se a opção Shift+Tab for desligada, entrega o controle físico puramente e limpa o cache
+          result[i] = pad;
+          physicalPadsWrapper[i] = null;
         }
+      } else {
+        physicalPadsWrapper[i] = null;
       }
     }
 
-    // 2. Injeta o controle virtual apenas no primeiro slot vazio disponível
+    // 2. Injeta o controle virtual no primeiro slot vazio disponível
     if (isGamepadEnabled) {
       virtualGamepad.timestamp = performance.now();
       let emptySlot = result.findIndex(p => p === null);
